@@ -78,12 +78,13 @@ def GenJsApiMap(module, cppHeader):
     if c != module:
       t = \
 '''
-"%s": {
-%s
-}
+"%s":{%s
+},
 ''' %(c, t)
       t = AddIndent(t, 2)
     s += t
+
+  s = RemoveLastComma(s)
 
   if len(cppHeader.functions) > 0:
     s += ','
