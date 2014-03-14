@@ -85,9 +85,12 @@ def GenJsApiMap(module, cppHeader):
       t = AddIndent(t, 2)
     s += t
 
+  if len(cppHeader.functions) > 0:
+    s += ','
+
   #generate map of functions
   for idx, func in enumerate(cppHeader.functions):
-    s += AddIndent(GenFuncMap(module, func), 2)
+    s += GenFuncMap(module, func)
     s += ","
   
   s = RemoveLastComma(s) + "\n}"
