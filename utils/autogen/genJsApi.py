@@ -1,4 +1,5 @@
 from config import *
+from util import *
 import re
 
 def GenArgs(hdl, args):
@@ -66,17 +67,11 @@ def GenJsApi(module, cppHeader):
     GenFunc(fp, module, func)
 
   #gen constant
-  r = re.compile('[-+]?[1-9]\d*\.\d+|-?0\.\d*[1-9]\d*');
-  for defines in cppHeader.defines:
-    macros = defines.split("//")[0].split()
+  for define in cppHeader.defines:
 
-    #only handle simple define    
-    if len(macros) != 2:
-      continue
+    macros = IsValidMacro(define)
 
-    m = r.match(macros[1])
-
-    if macros[1].isdigit() or (m and m.end() == len(macros[1])):
+    if len(macros) != 0:
       GenConst(fp, module, macros[0], macros[1])
 
   #end of module

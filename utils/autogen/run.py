@@ -6,6 +6,7 @@ import CppHeaderParser
 from config      import *
 from genJsApi    import *
 from genJsApiMap import *
+from genC        import *
 
 def ParseHeader(name):
   try:
@@ -29,6 +30,7 @@ def HandleHeader(root, f):
 
   GenJsApiMap(split[0], cppHeader)
   GenJsApi(split[0], cppHeader)
+  GenC(split[0], cppHeader)
 
 if __name__ == "__main__":
   for root, dirs, files in os.walk(INPUT_DECL_PATH):

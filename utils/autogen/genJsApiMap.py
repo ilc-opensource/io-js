@@ -1,19 +1,5 @@
 from config import *
-
-def RemoveLastComma(s):
-  if s.endswith(','):
-    return s.rsplit(',', 1)[0]
-  else:
-    return s
-
-
-def AddIndent(s, num):
-  indent = " " * num
-  lines = s.split("\n")
-  for idx, line in enumerate(lines):
-    lines[idx] = indent + line
-  s = "\n".join(lines)
-  return s
+from util import *
 
 def GenArgsMap(args):
   if len(args) == 0:
