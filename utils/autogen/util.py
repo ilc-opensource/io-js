@@ -7,6 +7,7 @@ C2V8 = { \
   "int": ["Int32", "ToInt32", "IntegerValue", "int"], \
   "unsigned int": ["Uint32", "ToUint32", "Uint32Value", "unsigned int" ], \
   "float": ["Number", "ToNumber", "NumberValue", "float"], \
+  "bool" : ["Boolean", "ToBoolean", "BooleanValue", "bool"], \
   "char*": ["String", "ToString"] \
 }
 
@@ -38,6 +39,9 @@ def GetV8Value(value, t):
   return "%s::New((%s)%s)" % (C2V8[t][0], C2V8[t][3], value)
 
 def CheckSanity(func):
+  if func.has_key("overwrite") and func["overwrite"]:
+    return True
+
   for arg in func["parameters"]:
     if not GetV8Type(arg["type"]):
       return False
