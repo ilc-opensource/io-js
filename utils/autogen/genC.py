@@ -393,7 +393,7 @@ using namespace v8;
 
 def GenModule(module, cppHeader):
 
-  s = "#include %s_addon.h\n" % module
+  s = '#include "%s_addon.h"\n' % module
 
   for func in cppHeader.functions:
     s += GenFunc(func)
