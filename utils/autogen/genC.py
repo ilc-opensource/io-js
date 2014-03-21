@@ -26,7 +26,7 @@ def GenSetFunc(obj, func):
 def GetFuncDesc(func):
   return '''//%d: %s\n'''% (func["line_number"], func["debug"])
 
-def GenFuncDecl(funcs):
+def GenSetMemberFunc(funcs):
   s = "\nvoid SetMemberFunc(Handle<Object> obj) {"
   for func in funcs:
     if not CheckSanity(func):
@@ -162,8 +162,6 @@ def GenConstructorDecl(func):
 def GenClassDecl(name, c):
   s = \
 '''
-#include <node.h>
-
 class %sV8:: public node::ObjectWrap {
 
 private:
@@ -234,14 +232,18 @@ def GenOverwrite(name, func):
     temp =  GenArgTrans(f)    
     s += \
 '''
-    if (args.Length() == %d) {
+%sif (args.Length() == %d) {
 %s%s
     }
-''' %(len(f["parameters"]), \
+''' %(AddIndent(GetFuncDesc(f), 4), \
+      len(f["parameters"]), \
       AddIndent(GenArgTrans(f), 8), \
       AddIndent(GenMethodObjCall(f), 8))
 
-  s += "}\n"
+  s += '''
+    return scope.Close(Undefined());
+}
+'''
 
   return s
 
@@ -370,29 +372,37 @@ def GroupFunc(funcs):
         "overwrite": True \
         })
 
-def GenModule(module, cppHeader):
+def GenModuleDecl(module, cppHeader):
   s = \
 '''
+#ifndef %s_ADDON_H
+#define %s_ADDON_H
+
 #include <v8.h>
 #include <node.h>
 #include "%s.h"
 
 using namespace v8;
-''' % module
+''' % (module.upper(), module.upper(), module)
+  
+  for c in cppHeader.classes:
+    s += GenClassDecl(c, cppHeader.classes[c])
+  
+  s += "\n#endif"
+  return s
+
+def GenModule(module, cppHeader):
+
+  s = "#include %s_addon.h\n" % module
 
   for func in cppHeader.functions:
     s += GenFunc(func)
 
-  s += GenFuncDecl(cppHeader.functions)
+  s += GenSetMemberFunc(cppHeader.functions)
 
   s += GenConst(cppHeader.defines)
 
-  #to handle the overwrite functions
-  for c in cppHeader.classes:    
-    GroupFunc(cppHeader.classes[c]["methods"]["public"])
-
   for c in cppHeader.classes:
-    s += GenClassDecl(c, cppHeader.classes[c])
     s += GenClass(c, cppHeader.classes[c])
   
   s += GenInit(cppHeader)
@@ -406,8 +416,17 @@ NODE_MODULE(%s, Init)
   return s
 
 def GenC(module, cppHeader):
+
+  #to handle the overwrite functions
+  for c in cppHeader.classes:    
+    GroupFunc(cppHeader.classes[c]["methods"]["public"])
+
   f = OUTPUT_DEV_PATH + "/" + module + ".cpp"
-  fp = open(f, "w")
-  
+  fp = open(f, "w")  
   fp.write(GenModule(module, cppHeader))
+
+  f = OUTPUT_DEV_PATH + "/" + module + "_addon.h"
+  fp = open(f, "w")  
+  fp.write(GenModuleDecl(module, cppHeader))
+
   print "generate " + f
