@@ -24,7 +24,12 @@ def GenSetFunc(obj, func):
   return s
 
 def GetFuncDesc(func):
-  return '''//%d: %s\n'''% (func["line_number"], func["debug"])
+  if func.has_key("overwrite") and func["overwrite"]:
+    s = "//%s" % func["name"]
+  else:
+    s = "//%d: %s"% (func["line_number"], func["debug"])
+
+  return s
 
 def GenSetMemberFunc(funcs):
   s = "\nvoid SetMemberFunc(Handle<Object> obj) {"
@@ -32,7 +37,7 @@ def GenSetMemberFunc(funcs):
     if not CheckSanity(func):
       continue;
     s += GenSetFunc("obj", func)
-  s += "}"
+  s += "}\n"
   return s
 
 def GenArgName(idx, args):
@@ -95,11 +100,12 @@ def GenRet(func):
     return "%s %s;" % (retType, GetRetName(func)) 
 
 def GenFunc(func):
-  s = "" 
-  if not CheckSanity(func):
-    return GetFuncDesc(func)
+  s = "\n" + GetFuncDesc(func)
 
-  s = \
+  if not CheckSanity(func):
+    return s
+
+  s += \
 '''
 Handle<Value> %s(const Arguments &args) {
     HandleScope scope;
@@ -190,6 +196,7 @@ public:
 def GenConstructor(name, func):
   s = \
 '''
+//constructor
 %sV8::%sV8(%s) {
     m_val = new %s(%s);
 }
@@ -199,11 +206,12 @@ def GenConstructor(name, func):
 def GenMethodHead(name, func):
   return \
 '''
+%s
 Handle<Value> %sV8::%s(const Arguments& args) {
     HandleScope scope;
 
     %sV8* obj = ObjectWrap::Unwrap<%sV8>(args.This());
-''' % (name, MangleFuncName(func), name, name)
+''' % (GetFuncDesc(func), name, MangleFuncName(func), name, name)
 
 def GenMethodObjCall(func):
   sRetType = func["returns"]
@@ -228,17 +236,18 @@ return scope.Close(%s);''' \
 def GenOverwrite(name, func):
   s = GenMethodHead(name, func)
 
-  for f in func["funcs"]:
-    temp =  GenArgTrans(f)    
+  for f in func["funcs"]:    
+    temp  =  GenArgTrans(f)
+    temp +=  GenMethodObjCall(f)
     s += \
 '''
-%sif (args.Length() == %d) {
-%s%s
+    %s
+    if (args.Length() == %d) {
+%s
     }
-''' %(AddIndent(GetFuncDesc(f), 4), \
+''' %(GetFuncDesc(f), \
       len(f["parameters"]), \
-      AddIndent(GenArgTrans(f), 8), \
-      AddIndent(GenMethodObjCall(f), 8))
+      AddIndent(temp, 8))
 
   s += '''
     return scope.Close(Undefined());
@@ -395,16 +404,16 @@ def GenModule(module, cppHeader):
 
   s = '#include "%s_addon.h"\n' % module
 
+  for c in cppHeader.classes:
+    s += GenClass(c, cppHeader.classes[c])
+
   for func in cppHeader.functions:
     s += GenFunc(func)
 
   s += GenSetMemberFunc(cppHeader.functions)
 
   s += GenConst(cppHeader.defines)
-
-  for c in cppHeader.classes:
-    s += GenClass(c, cppHeader.classes[c])
-  
+ 
   s += GenInit(cppHeader)
 
   #tail
