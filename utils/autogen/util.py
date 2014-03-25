@@ -8,7 +8,7 @@ C2V8 = { \
   "unsigned int": ["Uint32", "ToUint32", "Uint32Value", "unsigned int" ], \
   "float": ["Number", "ToNumber", "NumberValue", "float"], \
   "bool" : ["Boolean", "ToBoolean", "BooleanValue", "bool"], \
-  "char*": ["String", "ToString"] \
+  "char*": ["String", "ToString", "","char*"] \
 }
 
 #link other types
@@ -22,8 +22,10 @@ C2V8["uint8_t"] = C2V8["unsigned int"]
 C2V8["uint16_t"] = C2V8["unsigned int"]
 C2V8["uint32_t"] = C2V8["unsigned int"]
 
-
 def GetV8Type(t):
+  if (t.replace(" ", "") == 'char*'):
+    t = 'char*'
+
   if t == "void":
     return True
 
@@ -32,7 +34,10 @@ def GetV8Type(t):
   return C2V8[t][0]
 
 def GetCValue(value, t):
-  s = "%s->%s()" % (value, C2V8[t][2])
+  if (t.replace(" ", "") == 'char*'):
+    raise "Please Use other way to transform char* to String"
+  if (value):
+    s = "%s->%s()" % (value, C2V8[t][2])
   return s
 
 def GetV8Value(value, t):

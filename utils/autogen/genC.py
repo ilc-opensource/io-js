@@ -5,7 +5,7 @@ from util import *
 def GenExport(module):
   s = \
 '''
-void Init(Handle<Object> exports) {
+void InitV8(Handle<Object> exports) {
 
     Local<Function> constructFn = FunctionTemplate::New(%s)->GetFunction();
     exports->Set(String::NewSymbol("%s"), constructFn);
@@ -43,6 +43,9 @@ def GenSetMemberFunc(funcs):
 def GenArgName(idx, args):
   return "arg%d"%idx
 
+def GenArgArrayName(idx, args):
+  return "args[%d]"%idx
+
 def GenArgList(func, withType):
   s =""
   args = func["parameters"]
@@ -71,10 +74,18 @@ def GenArgTrans(func):
     if arg["type"] == "void":
       continue
     argName = GenArgName(idx, args)
-    s += \
+
+    if arg["type"].replace(" ", "") == "char*":
+      s += \
+'''
+String::AsciiValue strVal(%s->ToString());
+char* %s = (char *)*strVal;
+'''% (GenArgArrayName(idx, args), argName)
+    else:
+      s += \
 '''
 %s %s = %s;
-'''% (arg["type"], argName, GetCValue(argName, arg["type"]))
+'''% (arg["type"], argName, GetCValue(GenArgArrayName(idx, args), arg["type"]))
   return s
 
 
@@ -109,7 +120,7 @@ def GenFunc(func):
 '''
 Handle<Value> %s(const Arguments &args) {
     HandleScope scope;
-'''%(func["name"])
+'''%(func["name"] + 'V8')
  
   temp  = GenArgTrans(func)
   s += AddIndent(temp, 4)
@@ -430,9 +441,11 @@ def GenC(module, cppHeader):
   for c in cppHeader.classes:    
     GroupFunc(cppHeader.classes[c]["methods"]["public"])
 
-  f = OUTPUT_DEV_PATH + "/" + module + ".cpp"
+  f = OUTPUT_DEV_PATH + "/" + module + "_addon.cpp"
   fp = open(f, "w")  
   fp.write(GenModule(module, cppHeader))
+
+  print "generate " + f
 
   f = OUTPUT_DEV_PATH + "/" + module + "_addon.h"
   fp = open(f, "w")  
