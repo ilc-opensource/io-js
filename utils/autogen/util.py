@@ -1,4 +1,5 @@
 import re
+from config import *
 
 reNum = re.compile('[-+]?[1-9]\d*\.\d+|-?0\.\d*[1-9]\d*')
 reInt = re.compile('[-+]?\d*')
@@ -8,22 +9,44 @@ C2V8 = { \
   "unsigned int": ["Uint32", "ToUint32", "Uint32Value", "unsigned int" ], \
   "float": ["Number", "ToNumber", "NumberValue", "float"], \
   "bool" : ["Boolean", "ToBoolean", "BooleanValue", "bool"], \
-  "char*": ["String", "ToString"] \
+  "char*": ["String", "ToString", "","char*"] \
 }
 
 #link other types
+C2V8["char"] = C2V8["int"]
 C2V8["long"] = C2V8["int"]
-C2V8["int8_t"] = C2V8["int"]
-C2V8["int16_t"] = C2V8["int"]
-C2V8["int32_t"] = C2V8["int"]
+C2V8["boolean"] = C2V8["bool"]
 
-C2V8["unsigned long"] = C2V8["unsigned int"]
-C2V8["uint8_t"] = C2V8["unsigned int"]
-C2V8["uint16_t"] = C2V8["unsigned int"]
-C2V8["uint32_t"] = C2V8["unsigned int"]
+C2V8["size_t"] = C2V8["unsigned int"]
+C2V8["uint8_t *"] = C2V8["char*"]
 
+def GetIdenticalType(t):
+  f = t
+  t = t.replace("register ", "")
+  t = t.replace("const ", "")
+  t = t.replace("extern ", "")
+  t = t.replace("auto ", "")
+  t = t.replace("inline ", "")
+
+  if t.find('''*''') == -1:
+    if t.find("unsigned") != -1 or t.find("uint") != -1 or t.find("__u") != -1:
+      t = "unsigned int"
+    elif t.find("signed") != -1 or t.find("int") != -1 or t.find("__s") != -1:
+      t = "int"
+  else:
+    t = t.replace('''uint8_t''', "char")
+    t = t.replace('''__u8''', "char")
+    if t.replace(" ","") == "char*":
+      t = "char*"
+
+  if f != t and DEBUG == 1 :
+    print "Before t %s" %(f)
+    print "After t %s" %(t)
+  return t;
 
 def GetV8Type(t):
+  t = GetIdenticalType(t);
+
   if t == "void":
     return True
 
@@ -32,10 +55,16 @@ def GetV8Type(t):
   return C2V8[t][0]
 
 def GetCValue(value, t):
-  s = "%s->%s()" % (value, C2V8[t][2])
+  t = GetIdenticalType(t);
+  if (t == 'char*'):
+    raise "Please Use other way to transform char* to String"
+  
+  if (value):
+    s = "%s->%s()" % (value, C2V8[t][2])
   return s
 
 def GetV8Value(value, t):
+  t = GetIdenticalType(t);
   return "%s::New((%s)%s)" % (C2V8[t][0], C2V8[t][3], value)
 
 def CheckSanity(func):
@@ -44,11 +73,15 @@ def CheckSanity(func):
 
   for arg in func["parameters"]:
     if not GetV8Type(arg["type"]):
+      print '''
+[Error]Func %s arg type: %s can't transfer to V8''' %(func["name"], arg["type"])
       return False
 
-  if not GetV8Type(func["returns"]):
+  if not GetV8Type(func["rtnType"]):
+    print '''
+[Error]Func %s return type: %s can't transfer to V8''' %(func["name"], func["rtnType"])
     return False
-  
+
   return True
 
 def IsNum(s):

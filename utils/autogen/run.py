@@ -33,7 +33,9 @@ def HandleHeader(root, f):
   GenC(split[0], cppHeader)
 
 if __name__ == "__main__":
-  for root, dirs, files in os.walk(INPUT_DECL_PATH):
-    for f in files:
-      HandleHeader(root, f)
-      print ""
+  for i in range (len(INPUT_DECL_PATHS)):
+    print "path: %s" %(INPUT_DECL_PATHS[i])
+    for root, dirs, files in os.walk(INPUT_DECL_PATHS[i]):
+      for f in files:
+        HandleHeader(root, f)
+        print ""

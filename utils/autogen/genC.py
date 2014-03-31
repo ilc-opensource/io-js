@@ -5,7 +5,7 @@ from util import *
 def GenExport(module):
   s = \
 '''
-void Init(Handle<Object> exports) {
+void InitV8(Handle<Object> exports) {
 
     Local<Function> constructFn = FunctionTemplate::New(%s)->GetFunction();
     exports->Set(String::NewSymbol("%s"), constructFn);
@@ -43,6 +43,9 @@ def GenSetMemberFunc(funcs):
 def GenArgName(idx, args):
   return "arg%d"%idx
 
+def GenArgArrayName(idx, args):
+  return "args[%d]"%idx
+
 def GenArgList(func, withType):
   s =""
   args = func["parameters"]
@@ -71,10 +74,20 @@ def GenArgTrans(func):
     if arg["type"] == "void":
       continue
     argName = GenArgName(idx, args)
-    s += \
+
+    argType = GetIdenticalType(arg["type"])
+
+    if argType == "char*":
+      s += \
+'''
+String::AsciiValue strVal(%s->ToString());
+char* %s = (char *)*strVal;
+'''% (GenArgArrayName(idx, args), argName)
+    else:
+      s += \
 '''
 %s %s = %s;
-'''% (arg["type"], argName, GetCValue(argName, arg["type"]))
+'''% (argType, argName, GetCValue(GenArgArrayName(idx, args), argType))
   return s
 
 
@@ -83,7 +96,7 @@ def GenCall(func):
   return s
 
 def GetRetName(func):
-  retType = func["returns"]
+  retType = func["rtnType"]
   if retType == "" or retType == "void":
     return ""
   else:
@@ -93,13 +106,14 @@ def MangleFuncName(func):
   return func["name"]
 
 def GenRet(func):
-  retType = func["returns"]
+  retType = func["rtnType"]
   if retType == "" or retType == "void":
     return ""
   else:
     return "%s %s;" % (retType, GetRetName(func)) 
 
 def GenFunc(func):
+  print "func %s" %(func["name"])
   s = "\n" + GetFuncDesc(func)
 
   if not CheckSanity(func):
@@ -109,12 +123,12 @@ def GenFunc(func):
 '''
 Handle<Value> %s(const Arguments &args) {
     HandleScope scope;
-'''%(func["name"])
+'''%(func["name"] + 'V8')
  
   temp  = GenArgTrans(func)
   s += AddIndent(temp, 4)
 
-  sRetType = func["returns"]
+  sRetType = GetIdenticalType(func["rtnType"])
 
   if sRetType == "" or sRetType == "void":
     s += \
@@ -182,7 +196,10 @@ public:
 
   for m in c["methods"]["public"]:
     if m["name"] == name:
-      s += "    " + GenConstructorDecl(m)
+      if m["overwrite"] == 1:
+        print "[TODO]: overwrite constructor function %s" %(name)
+      else:
+        s += "    " + GenConstructorDecl(m)
       continue
 
     s += \
@@ -194,6 +211,8 @@ public:
   return s
 
 def GenConstructor(name, func):
+  if DEBUG == 1:
+    print "Gen Constructor %s" %(name)
   s = \
 '''
 //constructor
@@ -214,7 +233,7 @@ Handle<Value> %sV8::%s(const Arguments& args) {
 ''' % (GetFuncDesc(func), name, MangleFuncName(func), name, name)
 
 def GenMethodObjCall(func):
-  sRetType = func["returns"]
+  sRetType = func["rtnType"]
   
   s = ""
 
@@ -237,6 +256,8 @@ def GenOverwrite(name, func):
   s = GenMethodHead(name, func)
 
   for f in func["funcs"]:    
+    if not CheckSanity(f):
+      continue;
     temp  =  GenArgTrans(f)
     temp +=  GenMethodObjCall(f)
     s += \
@@ -257,6 +278,8 @@ def GenOverwrite(name, func):
   return s
 
 def GenMethod(name, func):
+  if DEBUG == 1:
+    print ">>Gen func %s" %(MangleFuncName(func))
   if not CheckSanity(func):
     return GetFuncDesc(func) 
 
@@ -292,6 +315,9 @@ void %sV8::Init(Handle<Object> exports) {
   return s
   
 def GenClass(name, c):
+  if DEBUG == 1:
+    print "Begin: gen Class %s." %(name)
+
   s = \
 '''
 Persistent<Function> %sV8::constructor;
@@ -311,20 +337,27 @@ Handle<Value> %sV8::New(const Arguments& args) {
     }
 }
 '''% (name, name, name, name, name, name)
+  
+  if DEBUG == 1:
+    print "End: gen New."
+
   funcs = c["methods"]["public"]
   for func in funcs:
-    if func["name"] == name:
-      s += GenConstructor(name, func)
-      continue
     if func["overwrite"]:
-      s += GenOverwrite(name, func)
+      if func["name"] == name:
+        print "[TODO]: overwrite constructor function %s" %(name)
+      else:
+        s += GenOverwrite(name, func)
     else:
-      s += GenMethod(name,func)
+      if func["name"] == name:
+        s += GenConstructor(name, func)
+      else:
+        s += GenMethod(name,func)
 
   s += GenClassInit(name, funcs)
-  return s    
+  return s
 
-def GenInit(cppHeader): 
+def GenInit(cppHeader):
   s = \
 '''
 void Init(Handle<Object> exports, Handle<Object> module) {
@@ -403,36 +436,70 @@ using namespace v8;
 def GenModule(module, cppHeader):
 
   s = '#include "%s_addon.h"\n' % module
+  
+  if DEBUG == 1:
+    print ">>>>Begin: gen Class"
 
   for c in cppHeader.classes:
     s += GenClass(c, cppHeader.classes[c])
+  
+  if DEBUG == 1:
+    print "<<<<End: gen Class"
+    print ">>>>Begin: gen function"
 
   for func in cppHeader.functions:
     s += GenFunc(func)
 
+  if DEBUG == 1:
+    print "<<<<End: gen func"
+    print ">>>>Begin: set Member func"
+  
   s += GenSetMemberFunc(cppHeader.functions)
 
+  if DEBUG == 1:
+    print "<<<<End: set Member func"
+    print ">>>>Begin: gen const"
+  
   s += GenConst(cppHeader.defines)
  
+  if DEBUG == 1:
+    print "<<<<End: gen const"
+    print ">>>>Begin: gen init"
+  
   s += GenInit(cppHeader)
 
+  if DEBUG == 1:
+    print "<<<<End: gen init"
   #tail
   s += \
 '''
 NODE_MODULE(%s, Init)
 '''% module
+  
+  if DEBUG == 1:
+    print "<<End: gen Class"
 
   return s
 
 def GenC(module, cppHeader):
 
+  if DEBUG == 1:
+    print "GenC: in."
+    print ">>Start: group Func."
+
   #to handle the overwrite functions
   for c in cppHeader.classes:    
     GroupFunc(cppHeader.classes[c]["methods"]["public"])
 
-  f = OUTPUT_DEV_PATH + "/" + module + ".cpp"
+  if DEBUG == 1:
+    print "<<End: group Func."
+    print ">>Start: gen Module."
+
+  f = OUTPUT_DEV_PATH + "/" + module + "_addon.cpp"
   fp = open(f, "w")  
   fp.write(GenModule(module, cppHeader))
+
+  print "generate " + f
 
   f = OUTPUT_DEV_PATH + "/" + module + "_addon.h"
   fp = open(f, "w")  
