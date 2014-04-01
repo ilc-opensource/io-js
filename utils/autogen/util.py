@@ -68,7 +68,7 @@ def GetV8Value(value, t):
   return "%s::New((%s)%s)" % (C2V8[t][0], C2V8[t][3], value)
 
 def CheckSanity(func):
-  if func.has_key("overwrite") and func["overwrite"]:
+  if func.has_key("override") and func["override"]:
     return True
 
   for arg in func["parameters"]:

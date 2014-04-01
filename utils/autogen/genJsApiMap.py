@@ -8,7 +8,7 @@ def GenArgsMap(args):
 
   s = \
 '''
-"paramters": [
+"parameters": [
 '''
   for idx, arg in enumerate(args):
     argName = arg["name"]
@@ -18,7 +18,7 @@ def GenArgsMap(args):
     s += \
 '''  {
     "name": "%s",
-    "type": "%s" 
+    "type": "%s"
   }'''%(argName, arg["type"]) 
     
     if idx == len(args) - 1:
@@ -43,8 +43,25 @@ def GenFuncMap(module, func):
   s = AddIndent(t, 2)    
   return s
 
+def GenPropertyMap(props):
+  s = ''
+  for p in props:
+    s += '''
+{
+  "name" : "%s",
+  "type" : "%s"
+},''' %(p['name'], p['type'])
+  
+  s = RemoveLastComma(s);
+  s = AddIndent(s, 2)
+  return s
+
 def GenClassMap(module, name, c):
-  s = '\n\n"methods": {'
+  s = '\n\n"properties": ['
+  s += GenPropertyMap(c["properties"]["public"])
+  s += '\n]\n'
+
+  s += '\n"methods": {'
   methods = c["methods"]["public"]
   
   for m in methods:
@@ -54,6 +71,18 @@ def GenClassMap(module, name, c):
   s = RemoveLastComma(s)
   s += '\n}'
   return s
+
+def GenDefineMap(defines):
+  r = "\nconstants: {"
+  for idx, define in enumerate(defines):
+    macros = IsValidMacro(define)
+    if len(macros) == 0:
+      continue
+    r += AddIndent('\n"' + macros[0] + '": ' + macros[1] + ',', 2)
+
+  RemoveLastComma(r)
+  r += '\n}\n'
+  return r
 
 def GenJsApiMap(module, cppHeader):
   s = '"%s" : {'%(module)  
@@ -71,6 +100,10 @@ def GenJsApiMap(module, cppHeader):
     s += t
 
   s = RemoveLastComma(s)
+  
+  if len(cppHeader.defines) > 0:
+    s += ','
+    s += AddIndent(GenDefineMap(cppHeader.defines), 2)
 
   if len(cppHeader.functions) > 0:
     s += ','
@@ -82,11 +115,15 @@ def GenJsApiMap(module, cppHeader):
   
   s = RemoveLastComma(s) + "\n}"
   
+  #generate outermost {}
+  rs = "{\n"
+  rs += AddIndent(s, 2)
+  rs += "\n}"
 
   #write to map file
-  f = OUTPUT_CMD_MAP_PATH + "/" + module + "_map.js"  
+  f = OUTPUT_CMD_MAP_PATH + "/" + module + "_map.json"  
   
   fp = open(f, "w")
-  fp.write(s)
+  fp.write(rs)
   print "generate " + f;
     

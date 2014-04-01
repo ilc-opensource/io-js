@@ -24,7 +24,7 @@ def GenSetFunc(obj, func):
   return s
 
 def GetFuncDesc(func):
-  if func.has_key("overwrite") and func["overwrite"]:
+  if func.has_key("override") and func["override"]:
     s = "//%s" % func["name"]
   else:
     s = "//%d: %s"% (func["line_number"], func["debug"])
@@ -34,9 +34,18 @@ def GetFuncDesc(func):
 def GenSetMemberFunc(funcs):
   s = "\nvoid SetMemberFunc(Handle<Object> obj) {"
   for func in funcs:
-    if not CheckSanity(func):
-      continue;
-    s += GenSetFunc("obj", func)
+    flag = False
+    if func["override"]:
+      for f in func["funcs"]:
+        if CheckSanity(f):
+          flag = True;
+          break;
+    else:
+      if CheckSanity(func):
+        flag = True;
+
+    if flag:
+      s += GenSetFunc("obj", func)
   s += "}\n"
   return s
 
@@ -113,39 +122,10 @@ def GenRet(func):
     return "%s %s;" % (retType, GetRetName(func)) 
 
 def GenFunc(func):
-  print "func %s" %(func["name"])
-  s = "\n" + GetFuncDesc(func)
-
-  if not CheckSanity(func):
-    return s
-
-  s += \
-'''
-Handle<Value> %s(const Arguments &args) {
-    HandleScope scope;
-'''%(func["name"] + 'V8')
- 
-  temp  = GenArgTrans(func)
-  s += AddIndent(temp, 4)
-
-  sRetType = GetIdenticalType(func["rtnType"])
-
-  if sRetType == "" or sRetType == "void":
-    s += \
-'''
-    %s;
-
-    return scope.Close(Undefined());
-}
-'''% GenCall(func)
-  else :
-    s += \
-'''
-    %s %s = %s;
-    return scope.Close(%s);
-}
-'''%(sRetType, GetRetName(func), GenCall(func), GetV8Value(GetRetName(func), sRetType))
-  
+  if func["override"]:
+    s = GenOverride("", func)
+  else:
+    s = GenMethod("", func)
   return s
 
 def GenConst(defines):
@@ -196,8 +176,8 @@ public:
 
   for m in c["methods"]["public"]:
     if m["name"] == name:
-      if m["overwrite"] == 1:
-        print "[TODO]: overwrite constructor function %s" %(name)
+      if m["override"]:
+        print "[TODO]: override constructor function %s" %(name)
       else:
         s += "    " + GenConstructorDecl(m)
       continue
@@ -222,44 +202,58 @@ def GenConstructor(name, func):
 ''' % (name, name, GenArgList(func, True), name, GenArgList(func, False))
   return s
 
-def GenMethodHead(name, func):
-  return \
+def GenMethodHead(className, func):
+  if className != "":
+    return \
 '''
 %s
 Handle<Value> %sV8::%s(const Arguments& args) {
     HandleScope scope;
 
     %sV8* obj = ObjectWrap::Unwrap<%sV8>(args.This());
-''' % (GetFuncDesc(func), name, MangleFuncName(func), name, name)
-
-def GenMethodObjCall(func):
-  sRetType = func["rtnType"]
-  
+''' % (GetFuncDesc(func), className, MangleFuncName(func), className, className)
+  else:
+    return \
+'''
+%s
+Handle<Value> %s(const Arguments &args) {
+    HandleScope scope;
+'''%(GetFuncDesc(func), func["name"] + 'V8')
+ 
+def GenMethodCall(func, className):
   s = ""
+  sRetType = GetIdenticalType(func["rtnType"])
+  if className == "":
+    objStr = ""
+  else:
+    objStr = '''
+obj->m_val->
+'''
 
   if sRetType == "" or sRetType == "void":
     s += \
 '''
-obj->m_val->%s;
+%s%s;
 return scope.Close(Undefined());
-''' % GenCall(func)
+''' %(objStr, GenCall(func))
+
   else:
     s += \
 '''
-%s %s = obj->m_val->%s;
+%s %s = %s%s;
 return scope.Close(%s);''' \
-    % (sRetType, GetRetName(func), GenCall(func), GetV8Value(GetRetName(func), sRetType))
+    % (sRetType, GetRetName(func), objStr, GenCall(func), GetV8Value(GetRetName(func), sRetType))
 
   return s
 
-def GenOverwrite(name, func):
-  s = GenMethodHead(name, func)
+def GenOverride(className, func):
+  s = GenMethodHead(className, func)
 
-  for f in func["funcs"]:    
+  for f in func["funcs"]:
     if not CheckSanity(f):
       continue;
     temp  =  GenArgTrans(f)
-    temp +=  GenMethodObjCall(f)
+    temp +=  GenMethodCall(f, className)
     s += \
 '''
     %s
@@ -277,19 +271,20 @@ def GenOverwrite(name, func):
 
   return s
 
-def GenMethod(name, func):
+def GenMethod(className, func):
   if DEBUG == 1:
     print ">>Gen func %s" %(MangleFuncName(func))
-  if not CheckSanity(func):
-    return GetFuncDesc(func) 
 
-  s = GenMethodHead(name, func) 
+  if not CheckSanity(func):
+    return GetFuncDesc(func)
+
+  s = GenMethodHead(className, func)
   s += AddIndent(GenArgTrans(func), 4)
-  s += AddIndent(GenMethodObjCall(func), 4)
+  s += AddIndent(GenMethodCall(func, className), 4)
   s += "\n}"
   return s
 
-def GenClassInit(name, funcs) :
+def GenClassInit(className, funcs) :
   s = \
 '''
 void %sV8::Init(Handle<Object> exports) {
@@ -299,7 +294,7 @@ void %sV8::Init(Handle<Object> exports) {
     tpl->SetClassName(String::NewSymbol("%s"));
     tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
-    // Prototype ''' % (name, name)
+    // Prototype ''' % (className, className)
   for func in funcs:
     s += \
 '''
@@ -311,12 +306,12 @@ void %sV8::Init(Handle<Object> exports) {
 '''
     constructor = Persistent<Function>::New(tpl->GetFunction());
     exports->Set(String::NewSymbol("%s"), constructor);
-}''' % (name)
+}''' % (className)
   return s
   
-def GenClass(name, c):
+def GenClass(className, c):
   if DEBUG == 1:
-    print "Begin: gen Class %s." %(name)
+    print "Begin: gen Class %s." %(className)
 
   s = \
 '''
@@ -336,25 +331,25 @@ Handle<Value> %sV8::New(const Arguments& args) {
       return scope.Close(constructor->NewInstance(argc, argv));
     }
 }
-'''% (name, name, name, name, name, name)
+'''% (className, className, className, className, className, className)
   
   if DEBUG == 1:
     print "End: gen New."
 
   funcs = c["methods"]["public"]
   for func in funcs:
-    if func["overwrite"]:
-      if func["name"] == name:
-        print "[TODO]: overwrite constructor function %s" %(name)
+    if func["override"]:
+      if func["name"] == className:
+        print "[TODO]: override constructor function %s" %(className)
       else:
-        s += GenOverwrite(name, func)
+        s += GenOverride(className, func)
     else:
-      if func["name"] == name:
-        s += GenConstructor(name, func)
+      if func["name"] == className:
+        s += GenConstructor(className, func)
       else:
-        s += GenMethod(name,func)
+        s += GenMethod(className, func)
 
-  s += GenClassInit(name, funcs)
+  s += GenClassInit(className, funcs)
   return s
 
 def GenInit(cppHeader):
@@ -404,14 +399,14 @@ def GroupFunc(funcs):
 
   for g in groups:
     if len(g) == 1:
-      g[0]["overwrite"] = False
+      g[0]["override"] = False
       funcs.append(g[0])
     
     if len(g) > 1:
       funcs.append({ \
         "name": g[0]["name"], \
         "funcs": g, \
-        "overwrite": True \
+        "override": True \
         })
 
 def GenModuleDecl(module, cppHeader):
@@ -482,17 +477,7 @@ NODE_MODULE(%s, Init)
   return s
 
 def GenC(module, cppHeader):
-
   if DEBUG == 1:
-    print "GenC: in."
-    print ">>Start: group Func."
-
-  #to handle the overwrite functions
-  for c in cppHeader.classes:    
-    GroupFunc(cppHeader.classes[c]["methods"]["public"])
-
-  if DEBUG == 1:
-    print "<<End: group Func."
     print ">>Start: gen Module."
 
   f = OUTPUT_DEV_PATH + "/" + module + "_addon.cpp"
