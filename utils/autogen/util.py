@@ -5,11 +5,11 @@ reNum = re.compile('[-+]?[1-9]\d*\.\d+|-?0\.\d*[1-9]\d*')
 reInt = re.compile('[-+]?\d*')
 
 C2V8 = { \
-  "int": ["Int32", "ToInt32", "IntegerValue", "int"], \
-  "unsigned int": ["Uint32", "ToUint32", "Uint32Value", "unsigned int" ], \
-  "float": ["Number", "ToNumber", "NumberValue", "float"], \
-  "bool" : ["Boolean", "ToBoolean", "BooleanValue", "bool"], \
-  "char*": ["String", "ToString", "","char*"] \
+  "int": ["Int32", "ToInt32", "IntegerValue", "int", "IsInt32"], \
+  "unsigned int": ["Uint32", "ToUint32", "Uint32Value", "unsigned int", "IsUint32" ], \
+  "float": ["Number", "ToNumber", "NumberValue", "float", "IsNumber"], \
+  "bool" : ["Boolean", "ToBoolean", "BooleanValue", "bool", "IsBoolean"], \
+  "char*": ["v8::String", "ToString", "", "char*", "IsObject"] \
 }
 
 #link other types
@@ -28,7 +28,7 @@ def GetIdenticalType(t):
   t = t.replace("auto ", "")
   t = t.replace("inline ", "")
 
-  if t.find('''*''') == -1:
+  if t.find('''*''') == -1 and t.find('''&''') == -1:
     if t.find("unsigned") != -1 or t.find("uint") != -1 or t.find("__u") != -1:
       t = "unsigned int"
     elif t.find("signed") != -1 or t.find("int") != -1 or t.find("__s") != -1:
@@ -46,7 +46,7 @@ def GetIdenticalType(t):
 
 def GetV8Type(t):
   t = GetIdenticalType(t);
-
+  print "converted " + t
   if t == "void":
     return True
 
@@ -67,11 +67,42 @@ def GetV8Value(value, t):
   t = GetIdenticalType(t);
   return "%s::New((%s)%s)" % (C2V8[t][0], C2V8[t][3], value)
 
+def GetV8TypeCheck(t):
+  t = GetIdenticalType(t);
+  return C2V8[t][4]
+
+def IsV8FuncGen(func):
+  flag = False
+  if func["override"]:
+    for f in func["funcs"]:
+      if CheckSanity(f):
+        flag = True;
+        break;
+  else:
+    if CheckSanity(func):
+      flag = True;
+  return flag
+
 def CheckSanity(func):
-  if func.has_key("override") and func["override"]:
-    return True
+  #if func.has_key("override") and func["override"]:
+  #  return True
+  
+  if func["pure_virtual"]:
+    print "pure virtual function."
+    return False
+  
+  if re.match(r"operator.*", func["name"]):
+    print '''
+[Error] Func %s is not converted''' %(func["name"])
+    return False
+
+  if not GetV8Type(func["rtnType"]):
+    print '''
+[Error]Func %s return type: %s can't transfer to V8''' %(func["name"], func["rtnType"])
+    return False
 
   for arg in func["parameters"]:
+    print arg["type"]
     if not GetV8Type(arg["type"]):
       print '''
 [Error]Func %s arg type: %s can't transfer to V8''' %(func["name"], arg["type"])

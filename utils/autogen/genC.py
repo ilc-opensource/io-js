@@ -2,13 +2,23 @@ import os
 from config import *
 from util import *
 
+def GetV8ClassName(className):
+  return className + "V8"
+
+def GetV8FuncName(func):
+  name = func["name"]
+  if re.match(r"operator.*", name):
+    return name[0:8] + " " + name[8:]
+  else:
+    return name + "V8"
+
 def GenExport(module):
   s = \
 '''
 void InitV8(Handle<Object> exports) {
 
     Local<Function> constructFn = FunctionTemplate::New(%s)->GetFunction();
-    exports->Set(String::NewSymbol("%s"), constructFn);
+    exports->Set(v8::String::NewSymbol("%s"), constructFn);
 }
 
 NODE_MODULE(%s, Init);
@@ -18,32 +28,23 @@ NODE_MODULE(%s, Init);
 def GenSetFunc(obj, func):
   s = \
 '''
-    %s->Set(String::NewSymbol("%s"),
-           FunctionTemplate::New(%sV8)->GetFunction());
-'''%(obj, func["name"], func["name"])
+    %s->Set(v8::String::NewSymbol("%s"),
+           FunctionTemplate::New(%s)->GetFunction());
+'''%(obj, func["name"], GetV8FuncName(func))
   return s
 
 def GetFuncDesc(func):
   if func.has_key("override") and func["override"]:
-    s = "//%s" % func["name"]
+    s = "//%s\n" % func["name"]
   else:
-    s = "//%d: %s"% (func["line_number"], func["debug"])
+    s = "//%d: %s\n"% (func["line_number"], func["debug"])
 
   return s
 
 def GenSetMemberFunc(funcs):
   s = "\nvoid SetMemberFunc(Handle<Object> obj) {"
   for func in funcs:
-    flag = False
-    if func["override"]:
-      for f in func["funcs"]:
-        if CheckSanity(f):
-          flag = True;
-          break;
-    else:
-      if CheckSanity(func):
-        flag = True;
-
+    flag = IsV8FuncGen(func)
     if flag:
       s += GenSetFunc("obj", func)
   s += "}\n"
@@ -52,7 +53,7 @@ def GenSetMemberFunc(funcs):
 def GenArgName(idx, args):
   return "arg%d"%idx
 
-def GenArgArrayName(idx, args):
+def GenArgArrayName(idx):
   return "args[%d]"%idx
 
 def GenArgList(func, withType):
@@ -75,7 +76,25 @@ def GenArgList(func, withType):
       s += ", "
 
   return s
-   
+
+def GenArgCheck(func) :
+  s =""
+  args = func["parameters"]
+  for idx, arg in enumerate(args):
+    if arg["type"] == "void":
+      continue
+    
+    #argName = arg["name"]
+    #if len(argName) == 0:
+    argName = GenArgArrayName(idx)
+    
+    s += "%s->%s()" % (argName, GetV8TypeCheck(arg["type"]))
+
+    if idx != (len(args) - 1):
+      s += " && "
+  
+  return s
+
 def GenArgTrans(func):
   s = ""
   args = func["parameters"] 
@@ -89,23 +108,20 @@ def GenArgTrans(func):
     if argType == "char*":
       s += \
 '''
-String::AsciiValue strVal(%s->ToString());
+v8::String::AsciiValue strVal(%s->ToString());
 char* %s = (char *)*strVal;
-'''% (GenArgArrayName(idx, args), argName)
+'''% (GenArgArrayName(idx), argName)
     else:
       s += \
 '''
 %s %s = %s;
-'''% (argType, argName, GetCValue(GenArgArrayName(idx, args), argType))
+'''% (argType, argName, GetCValue(GenArgArrayName(idx), argType))
   return s
-
 
 def GenCall(func):
-  s = "%s(%s)" % (func["name"], GenArgList(func, False))
-  return s
+  return "%s(%s)" % (func["name"], GenArgList(func, False))
 
-def GetRetName(func):
-  retType = func["rtnType"]
+def GetRetName(retType):
   if retType == "" or retType == "void":
     return ""
   else:
@@ -113,13 +129,6 @@ def GetRetName(func):
 
 def MangleFuncName(func):
   return func["name"]
-
-def GenRet(func):
-  retType = func["rtnType"]
-  if retType == "" or retType == "void":
-    return ""
-  else:
-    return "%s %s;" % (retType, GetRetName(func)) 
 
 def GenFunc(func):
   if func["override"]:
@@ -141,7 +150,7 @@ void SetConst(Handle<Object> obj) {
 
     s += \
 '''
-    obj->Set(String::NewSymbol("%s"),
+    obj->Set(v8::String::NewSymbol("%s"),
 '''%macros[0]
 
     if IsInt(macros[1]):
@@ -155,37 +164,48 @@ void SetConst(Handle<Object> obj) {
 
 
 def GenConstructorDecl(func):
-  s = "explicit %sV8"% func["name"]
-  s += "(%s);"%GenArgList(func, True)
+  s = "explicit %s"% GetV8ClassName(func["name"])
+  s += "(%s);\n"%GenArgList(func, True)
   return s 
   
 def GenClassDecl(name, c):
   s = \
 '''
-class %sV8:: public node::ObjectWrap {
+class %s: public node::ObjectWrap {
 
 private:
     %s *m_val;
-    ~%sV8();
+    ~%s() { };
     static v8::Handle<v8::Value> New(const v8::Arguments& args);
     static v8::Persistent<v8::Function> constructor;
 
 public:
     static void Init(v8::Handle<v8::Object> exports);
-'''%(name, name, name)
+'''%(GetV8ClassName(name), name, GetV8ClassName(name))
 
   for m in c["methods"]["public"]:
     if m["name"] == name:
       if m["override"]:
-        print "[TODO]: override constructor function %s" %(name)
+        for f in m["funcs"]:
+          if CheckSanity(f) == False:
+            s += ""
+          else:
+            s += "    " + GenConstructorDecl(f)
+          
+    #    print "[TODO]: override constructor function %s" %(name)
       else:
-        s += "    " + GenConstructorDecl(m)
+        if CheckSanity(m) == False:
+          s += ""
+        else:
+          s += "    " + GenConstructorDecl(m)
       continue
 
-    s += \
+    flag = IsV8FuncGen(m)
+    if flag:
+      s += \
 '''
     static v8::Handle<v8::Value> %s(const v8::Arguments& args);''' \
-    % MangleFuncName(m)
+    % GetV8FuncName(m)
 
   s += "\n};\n"
   return s
@@ -193,42 +213,46 @@ public:
 def GenConstructor(name, func):
   if DEBUG == 1:
     print "Gen Constructor %s" %(name)
+  if CheckSanity(func) == False:
+    return ""
   s = \
 '''
 //constructor
-%sV8::%sV8(%s) {
+%s::%s(%s) {
     m_val = new %s(%s);
 }
-''' % (name, name, GenArgList(func, True), name, GenArgList(func, False))
+''' % (GetV8ClassName(name), GetV8ClassName(name), GenArgList(func, True), name, GenArgList(func, False))
   return s
 
 def GenMethodHead(className, func):
   if className != "":
+    v8ClassName = GetV8ClassName(className)
     return \
 '''
 %s
-Handle<Value> %sV8::%s(const Arguments& args) {
+Handle<Value> %s::%s(const Arguments& args) {
     HandleScope scope;
 
-    %sV8* obj = ObjectWrap::Unwrap<%sV8>(args.This());
-''' % (GetFuncDesc(func), className, MangleFuncName(func), className, className)
+    %s* obj = ObjectWrap::Unwrap<%s>(args.This());
+''' % (GetFuncDesc(func), v8ClassName, GetV8FuncName(func), v8ClassName, v8ClassName)
   else:
     return \
 '''
 %s
 Handle<Value> %s(const Arguments &args) {
     HandleScope scope;
-'''%(GetFuncDesc(func), func["name"] + 'V8')
- 
+'''%(GetFuncDesc(func), GetV8FuncName(func))
+
 def GenMethodCall(func, className):
+  if re.match(r"operator.*", func["name"]):
+    return '''// TODO: operator %s override call''' %(func["name"][8:])
+
   s = ""
   sRetType = GetIdenticalType(func["rtnType"])
   if className == "":
     objStr = ""
   else:
-    objStr = '''
-obj->m_val->
-'''
+    objStr = '''obj->m_val->'''
 
   if sRetType == "" or sRetType == "void":
     s += \
@@ -242,11 +266,14 @@ return scope.Close(Undefined());
 '''
 %s %s = %s%s;
 return scope.Close(%s);''' \
-    % (sRetType, GetRetName(func), objStr, GenCall(func), GetV8Value(GetRetName(func), sRetType))
+    % (sRetType, GetRetName(sRetType), objStr, GenCall(func), GetV8Value(GetRetName(sRetType), sRetType))
 
   return s
 
 def GenOverride(className, func):
+  if IsV8FuncGen(func) == False:
+    return ""
+
   s = GenMethodHead(className, func)
 
   for f in func["funcs"]:
@@ -254,14 +281,20 @@ def GenOverride(className, func):
       continue;
     temp  =  GenArgTrans(f)
     temp +=  GenMethodCall(f, className)
+    argCheck = GenArgCheck(f);
+    andStr = ""
+    if (len(argCheck) > 0) :
+      andStr = " && "
     s += \
 '''
     %s
-    if (args.Length() == %d) {
+    if ((args.Length() == %d)%s%s) {
 %s
     }
 ''' %(GetFuncDesc(f), \
       len(f["parameters"]), \
+      andStr,\
+      argCheck,\
       AddIndent(temp, 8))
 
   s += '''
@@ -285,62 +318,151 @@ def GenMethod(className, func):
   return s
 
 def GenClassInit(className, funcs) :
+
   s = \
 '''
-void %sV8::Init(Handle<Object> exports) {
-
+void %s::Init(Handle<Object> exports) {
     // Prepare constructor template
     Local<FunctionTemplate> tpl = FunctionTemplate::New(New);
-    tpl->SetClassName(String::NewSymbol("%s"));
+    tpl->SetClassName(v8::String::NewSymbol("%s"));
     tpl->InstanceTemplate()->SetInternalFieldCount(1);
 
-    // Prototype ''' % (className, className)
+    // Prototype ''' % (GetV8ClassName(className), className)
+
   for func in funcs:
+    if IsV8FuncGen(func) == False:
+      continue
+    if (func["name"] == className):
+      continue
     s += \
 '''
-    tpl->PrototypeTemplate()->Set(String::NewSymbol("%s"),
-        FunctionTemplate::New(%sV8)->GetFunction());
-''' % (func["name"], func["name"])
+    tpl->PrototypeTemplate()->Set(v8::String::NewSymbol("%s"),
+        FunctionTemplate::New(%s)->GetFunction());
+''' % (func["name"],  GetV8FuncName(func))
 
   s += \
 '''
     constructor = Persistent<Function>::New(tpl->GetFunction());
-    exports->Set(String::NewSymbol("%s"), constructor);
+    exports->Set(v8::String::NewSymbol("%s"), constructor);
 }''' % (className)
   return s
-  
-def GenClass(className, c):
-  if DEBUG == 1:
-    print "Begin: gen Class %s." %(className)
 
-  s = \
+def GenFuncNew1(className, c):
+  v8ClassName = GetV8ClassName(className);
+  return \
 '''
-Persistent<Function> %sV8::constructor;
+Persistent<Function> %s::constructor;
 
-Handle<Value> %sV8::New(const Arguments& args) {
+Handle<Value> %s::New(const Arguments& args) {
     HandleScope scope;
 
     if (args.IsConstructCall()) {
       // Invoked as constructor: `new %s(...)`
       double value = args[0]->IsUndefined() ? 0 : args[0]->NumberValue();
-      %sV8 *obj = new %sV8(value);
+      %s *obj = new %s(value);
       obj->Wrap(args.This());
       return args.This();
     } else {
       // Invoked as plain function `%s(...)`, turn into construct call.
+      const int argc = 1;
+      Local<Value> argv[argc] = { args[0] };
       return scope.Close(constructor->NewInstance(argc, argv));
     }
 }
-'''% (className, className, className, className, className, className)
+'''% (v8ClassName, v8ClassName, className, v8ClassName, v8ClassName, className)
+
+def GenArgArrayList(func):
+  s = ""
+  for idx, arg in enumerate(func["parameters"]):
+    s += GenArgArrayName(idx) + ','
+  s = RemoveLastComma(s);
+  return s;
+
+def GenFuncNewContent(func):
+  if not CheckSanity(func):
+    return ""
   
-  if DEBUG == 1:
-    print "End: gen New."
+  className = GetV8ClassName(func["name"]);
+  argCheck = GenArgCheck(func);
+  andStr = ""
+  if (len(argCheck) > 0) :
+    andStr = " && "
+
+  s =''' 
+  if ((args.Length() == %d)%s%s) {
+    if (args.IsConstructCall()) {
+      // Invoked as constructor: `new %s(...)`
+      %s
+      %s *obj = new %s(%s);
+      obj->Wrap(args.This());
+      return args.This();
+    } else {
+      // Invoked as plain function `%s(...)`, turn into construct call.
+      const int argc = %d;
+      Local<Value> argv[argc] = { %s };
+      return scope.Close(constructor->NewInstance(argc, argv));
+    }
+  }'''%(len(func["parameters"]),\
+        andStr,\
+        argCheck,\
+        className,\
+        AddIndent(GenArgTrans(func), 6),\
+        className,\
+        className,\
+        GenArgList(func, False),\
+        className,\
+        len(func["parameters"]),\
+        GenArgArrayList(func))
+  return s
+
+def GenFuncNew(className, c):
+  v8ClassName = GetV8ClassName(className);
+  s = \
+'''
+Persistent<Function> %s::constructor;
+
+Handle<Value> %s::New(const Arguments& args) {
+    HandleScope scope;
+'''%(v8ClassName, v8ClassName)
+  
+  funcs = c["methods"]["public"]
+  for func in funcs:
+    if func["override"] and (func["name"] == className):
+      for f in func["funcs"]:
+        s += GenFuncNewContent(f);
+    elif (not func["override"]) and (func["name"] == className):
+      s += GenFuncNewContent(func);
+
+  s += '''
+}
+'''
+  return s
+
+def CheckVritualFunc(funcs):
+  for func in funcs:
+    if func.has_key("override") and func["override"]:
+      for f in func["funcs"]:
+        if f["pure_virtual"]:
+          return True
+    else:
+      if func["pure_virtual"]:
+        return True
+  return False
+
+def CheckAbstractClass(c):
+  return CheckVritualFunc(c["methods"]["public"]) or CheckVritualFunc(c["methods"]["protected"]) or CheckVritualFunc(c["methods"]["private"])
+
+
+def GenClass(className, c):
+  s = GenFuncNew(className, c);
 
   funcs = c["methods"]["public"]
   for func in funcs:
     if func["override"]:
       if func["name"] == className:
-        print "[TODO]: override constructor function %s" %(className)
+        for f in func["funcs"]:
+          s += GenConstructor(className, f)
+        #print "[TODO]: override constructor function %s" %(className)
       else:
         s += GenOverride(className, func)
     else:
@@ -358,17 +480,19 @@ def GenInit(cppHeader):
 void Init(Handle<Object> exports, Handle<Object> module) {
 '''
   for c in cppHeader.classes:
-    s += \
+    classT = cppHeader.classes[c]
+    if (classT["abstract"] == False) and (classT['declaration_method'] == "class"):
+      s += \
 '''
-    %sV8::Init(exports);
-''' % c
+    %s::Init(exports);
+''' % GetV8ClassName(c)
 
   s += \
 '''
     SetMemberFunc(exports);
 
     SetConst(exports);
-}    
+}
 '''
   return s
 
@@ -415,15 +539,17 @@ def GenModuleDecl(module, cppHeader):
 #ifndef %s_ADDON_H
 #define %s_ADDON_H
 
-#include <v8.h>
 #include <node.h>
+#include <v8.h>
 #include "%s.h"
 
 using namespace v8;
 ''' % (module.upper(), module.upper(), module)
   
   for c in cppHeader.classes:
-    s += GenClassDecl(c, cppHeader.classes[c])
+    classT = cppHeader.classes[c]
+    if (classT["abstract"] == False) and (classT['declaration_method'] == "class"):
+      s += GenClassDecl(c, cppHeader.classes[c])
   
   s += "\n#endif"
   return s
@@ -436,7 +562,9 @@ def GenModule(module, cppHeader):
     print ">>>>Begin: gen Class"
 
   for c in cppHeader.classes:
-    s += GenClass(c, cppHeader.classes[c])
+    classT = cppHeader.classes[c]
+    if (classT["abstract"] == False) and (classT['declaration_method'] == "class"):
+      s += GenClass(c, cppHeader.classes[c])
   
   if DEBUG == 1:
     print "<<<<End: gen Class"
@@ -469,7 +597,7 @@ def GenModule(module, cppHeader):
   s += \
 '''
 NODE_MODULE(%s, Init)
-'''% module
+'''% module.replace("-", "_")
   
   if DEBUG == 1:
     print "<<End: gen Class"
