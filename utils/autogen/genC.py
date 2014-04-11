@@ -42,7 +42,7 @@ def GetFuncDesc(func):
   return s
 
 def GenSetMemberFunc(funcs):
-  s = "\nvoid SetMemberFunc(Handle<Object> obj) {"
+  s = "\nstatic void SetMemberFunc(Handle<Object> obj) {"
   for func in funcs:
     flag = IsV8FuncGen(func)
     if flag:
@@ -98,12 +98,13 @@ def GenArgCheck(func) :
 def GenArgTrans(func):
   args = func["parameters"] 
   s = ""
-  if len(args) != 0:
+  t = GenArgCheck(func)
+  if len(t) != 0:
     s += \
 '''
 V8_ASSERT(%s, "parameters error!");
 
-''' % (GenArgCheck(func))
+''' % (t)
 
   for idx, arg in enumerate(args):
     if arg["type"] == "void":
@@ -114,8 +115,8 @@ V8_ASSERT(%s, "parameters error!");
     if argType == "char*":
       s += \
 '''v8::String::AsciiValue strVal(%s->ToString());
-char* %s = (char *)*strVal;
-'''% (GenArgArrayName(idx), argName)
+%s %s = (%s)*strVal;
+'''% (GenArgArrayName(idx), arg["type"], argName, arg["type"])
     else:
       s += \
 '''%s %s = %s;
@@ -145,7 +146,7 @@ def GenConst(defines):
   
   s = \
 '''
-void SetConst(Handle<Object> obj) {
+static void SetConst(Handle<Object> obj) {
 '''
   for define in defines:
     macros = IsValidMacro(define)
@@ -510,7 +511,7 @@ def GenClass(className, c):
   return s
 
 def GetInitName(module):
-  return "Init%s" % module
+  return "Init%s" % module.replace("-", "_") #replace '-' with '_' in file name(ex:i2c-dev.cpp)
 
 def GenInit(module, cppHeader):
   s = \
@@ -583,14 +584,18 @@ def GenModuleDecl(module, cppHeader):
 #include "%s.h"
 
 using namespace v8;
-
+#ifndef V8_EXCEPTION
+#define V8_EXCEPTION(info) { \\
+    v8::ThrowException(Exception::Error(v8::String::New(info))); \\
+    }
+#endif
 #ifndef V8_ASSERT
-#define V8_ASSERT(cond, ...) \
-    if(!(cond)) {  \
-        char buffer[512]; \
-        sprintf(buffer, __VA_ARGS__); \
-        V8_EXCEPTION(buffer); \
-        return scope.Close(Undefined()); \
+#define V8_ASSERT(cond, ...)  \\
+    if(!(cond)) {  \\
+        char buffer[512]; \\
+        sprintf(buffer, __VA_ARGS__); \\
+        V8_EXCEPTION(buffer); \\
+        return scope.Close(Undefined()); \\
     }
 #endif
 
@@ -807,6 +812,10 @@ def BuildGyp():
     'include_dirs' : [
       '%s',
 %s
+    ],
+
+    'cflags' : [
+      '-fpermissive',
     ],
 
     'libraries' : [
