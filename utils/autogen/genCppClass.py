@@ -3,7 +3,7 @@ def GenClass(module, name, c):
 '''
 #include <node.h>
 
-class %sV8:: public node::ObjectWrap {
+class %sV8: public node::ObjectWrap {
 
 public:
     static void Init(v8::Handle<v8::Object> exports);

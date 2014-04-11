@@ -1,6 +1,7 @@
 from config import *
 from util import *
 import re
+from genC import GroupFunc
 
 def GenArgs(hdl, args):
   for idx, arg in enumerate(args):
@@ -9,50 +10,71 @@ def GenArgs(hdl, args):
       argName = "arg%d"%(idx)
 
     hdl.write(argName)
+    hdl.write(", ")
+  
+  if len(args) > 0:
+    hdl.seek(hdl.tell() - 2)
+    
+  hdl.write("){\n")
 
-    if idx == (len(args) - 1):
-      hdl.write("){\n")
-    else:
-      hdl.write(", ")
 
-#genreate functions
-#TODO: eliminate static functions
-def GenFunc(hdl, module, func):
-  hdl.write("\n%s.%s = function("%(module, func["name"]))
-  GenArgs(hdl, func["parameters"])
-  hdl.write(\
-'''
-  console.log("%s")
-}
-'''%(func["name"]))
- 
 def GenConst(hdl, module, const, val):
   hdl.write(\
 '''
 %s.%s = %s;
 '''%(module, const, val))
-  
-def GenClass(hdl, module, name, c):
+
+def GetFuncName(f, override):
+  fname = f['name']
+  if override:
+    fname += "With"
+    for arg in f["parameters"]:
+      t = re.sub('\s+', "",arg["type"])
+      t = t.capitalize()
+      fname += t
+
+  return fname
+
+
+def GenMethod(hdl, f, override, moduleName, className):
+  funcName = GetFuncName(f, override)
+  if className == "":
+    name_t = moduleName
+    hdl.write("\n%s.%s = function(" %(name_t, funcName))
+  else:
+    name_t = className
+    hdl.write("\n%s.prototype.%s = function(" %(name_t, funcName))
+
+  args = f["parameters"]
+  GenArgs(hdl, args)
+
+  hdl.write(\
+'''
+  console.log("%s.%s");
+};
+'''%(name_t, funcName))
+
+#genreate functions
+def GenFunc(hdl, func, moduleName, className):
+  if func.has_key("override") and func["override"]:
+    for f in func["funcs"]:
+      GenMethod(hdl, f, True, moduleName, className)
+  else:
+    GenMethod(hdl, func, False, moduleName, className)
+
+def GenClass(hdl, module, className, c):
   hdl.write(\
 '''
 %s = function(options) {
 };
-'''%(name))
+'''%(className))
+  
+  funcs = c["methods"]["public"]
+  for func in funcs:
+    GenFunc(hdl, func, module, className)
 
-  for m in c["methods"]["public"]:
-    hdl.write("\n%s.prototype.%s = function("%(name, m["name"]))
-
-    args = m["parameters"]
-    GenArgs(hdl, args)
-
-    hdl.write(\
-'''
-  console.log("%s.%s");
-}
-'''%(name, m["name"]))
-
-  if module != name:
-    hdl.write("\n%s.%s = %s\n"%(module, name, name))
+  if module != className:
+    hdl.write("\n%s.%s = %s\n"%(module, className, className))
     
 def GenJsApi(module, cppHeader):
   f = OUTPUT_COMP_PATH + "/" + module + ".js"
@@ -64,7 +86,7 @@ def GenJsApi(module, cppHeader):
 
   #gen external functions
   for func in cppHeader.functions:
-    GenFunc(fp, module, func)
+    GenFunc(fp, func, module, "")
 
   #gen constant
   for define in cppHeader.defines:
@@ -80,5 +102,5 @@ def GenJsApi(module, cppHeader):
 module.exports = %s;
 '''%(module))
 
-  print "generate " + f
+  printDbg("generate " + f)
 
