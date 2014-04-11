@@ -10,12 +10,12 @@ from genC        import *
 
 def ParseHeader(name):
   try:
-    print "parsing ", name
+    printDbg("parsing " + name)
     cppHeader = CppHeaderParser.CppHeader(name)    
     return cppHeader
 
   except CppHeaderParser.CppParseError,  e:
-    print e
+    printDbg(e)
     sys.exit(1)
 
 def HandleHeader(root, f):
@@ -23,8 +23,11 @@ def HandleHeader(root, f):
 
   #only .h file is wanted
   if(split[1] != 'h'):
-    print f, ' is not header file'
+    printDbg(f + ' is not header file')
     return
+
+  # init debug output
+  SetPrintModule(f)
 
   cppHeader = ParseHeader(root + "/" + f);  
 
@@ -37,11 +40,20 @@ def HandleHeader(root, f):
 
   GenJsApi(split[0], cppHeader)
   GenC(split[0], cppHeader)
+  
+  UnsetPrintModule()
 
 if __name__ == "__main__":
+
+  GenPreGlobalInit()
+
   for i in range (len(INPUT_DECL_PATHS)):
-    print "path: %s" %(INPUT_DECL_PATHS[i])
+    printDbg("searching " +INPUT_DECL_PATHS[i])
     for root, dirs, files in os.walk(INPUT_DECL_PATHS[i]):
       for f in files:
         HandleHeader(root, f)
         print ""
+
+  GenPostGlobalInit()
+  GenGyp()
+  DumpSummary()

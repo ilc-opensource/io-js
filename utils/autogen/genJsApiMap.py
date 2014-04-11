@@ -125,5 +125,5 @@ def GenJsApiMap(module, cppHeader):
   
   fp = open(f, "w")
   fp.write(rs)
-  print "generate " + f;
+  printDbg( "generate " + f)
     

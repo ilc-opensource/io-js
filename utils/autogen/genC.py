@@ -35,9 +35,9 @@ def GenSetFunc(obj, func):
 
 def GetFuncDesc(func):
   if func.has_key("override") and func["override"]:
-    s = "//%s\n" % func["name"]
+    s = "//%s" % func["name"]
   else:
-    s = "//%d: %s\n"% (func["line_number"], func["debug"])
+    s = "//%d: %s"% (func["line_number"], func["debug"])
 
   return s
 
@@ -96,8 +96,15 @@ def GenArgCheck(func) :
   return s
 
 def GenArgTrans(func):
-  s = ""
   args = func["parameters"] 
+  s = ""
+  if len(args) != 0:
+    s += \
+'''
+V8_ASSERT(%s, "parameters error!");
+
+''' % (GenArgCheck(func))
+
   for idx, arg in enumerate(args):
     if arg["type"] == "void":
       continue
@@ -107,14 +114,12 @@ def GenArgTrans(func):
 
     if argType == "char*":
       s += \
-'''
-v8::String::AsciiValue strVal(%s->ToString());
+'''v8::String::AsciiValue strVal(%s->ToString());
 char* %s = (char *)*strVal;
 '''% (GenArgArrayName(idx), argName)
     else:
       s += \
-'''
-%s %s = %s;
+'''%s %s = %s;
 '''% (argType, argName, GetCValue(GenArgArrayName(idx), argType))
   return s
 
@@ -167,8 +172,11 @@ def GenConstructorDecl(func):
   s = "explicit %s"% GetV8ClassName(func["name"])
   s += "(%s);\n"%GenArgList(func, True)
   return s 
-  
+
+thisSummary = {}
+ 
 def GenClassDecl(name, c):
+  global thisSummary
   s = \
 '''
 class %s: public node::ObjectWrap {
@@ -188,14 +196,12 @@ public:
       if m["override"]:
         for f in m["funcs"]:
           if CheckSanity(f) == False:
-            s += ""
+            s += ""        
           else:
-            s += "    " + GenConstructorDecl(f)
-          
-    #    print "[TODO]: override constructor function %s" %(name)
+            s += "    " + GenConstructorDecl(f)          
       else:
         if CheckSanity(m) == False:
-          s += ""
+          s += ""          
         else:
           s += "    " + GenConstructorDecl(m)
       continue
@@ -211,9 +217,11 @@ public:
   return s
 
 def GenConstructor(name, func):
-  if DEBUG == 1:
-    print "Gen Constructor %s" %(name)
+  global thisSumamry
+
   if CheckSanity(func) == False:
+    printErr("Can't transfer: " + GetFuncDesc(func))
+    thisSummary["failFuncs"].append(name + "." + func["name"])   
     return ""
   s = \
 '''
@@ -222,11 +230,13 @@ def GenConstructor(name, func):
     m_val = new %s(%s);
 }
 ''' % (GetV8ClassName(name), GetV8ClassName(name), GenArgList(func, True), name, GenArgList(func, False))
+  thisSummary["succFuncs"].append(name + "." + func["name"])   
   return s
 
 def GenMethodHead(className, func):
   if className != "":
     v8ClassName = GetV8ClassName(className)
+    
     return \
 '''
 %s
@@ -258,6 +268,7 @@ def GenMethodCall(func, className):
     s += \
 '''
 %s%s;
+
 return scope.Close(Undefined());
 ''' %(objStr, GenCall(func))
 
@@ -265,12 +276,19 @@ return scope.Close(Undefined());
     s += \
 '''
 %s %s = %s%s;
+
 return scope.Close(%s);''' \
     % (sRetType, GetRetName(sRetType), objStr, GenCall(func), GetV8Value(GetRetName(sRetType), sRetType))
 
   return s
 
 def GenOverride(className, func):
+  global thisSummary
+
+  head = className
+  if len(className) != 0:
+    head += "."
+
   if IsV8FuncGen(func) == False:
     return ""
 
@@ -278,7 +296,12 @@ def GenOverride(className, func):
 
   for f in func["funcs"]:
     if not CheckSanity(f):
+      thisSummary["failFuncs"].append(head + f["name"])
+      printErr("Can't transfer: " + GetFuncDesc(func))
       continue;
+    
+    thisSummary["succFuncs"].append(head + f["name"])
+
     temp  =  GenArgTrans(f)
     temp +=  GenMethodCall(f, className)
     argCheck = GenArgCheck(f);
@@ -298,6 +321,8 @@ def GenOverride(className, func):
       AddIndent(temp, 8))
 
   s += '''
+    V8_ASSERT(false, "parameters error!");
+
     return scope.Close(Undefined());
 }
 '''
@@ -305,12 +330,23 @@ def GenOverride(className, func):
   return s
 
 def GenMethod(className, func):
-  if DEBUG == 1:
-    print ">>Gen func %s" %(MangleFuncName(func))
+  global thisSummary
+
+  head = className
+  if len(className) != 0:
+    head += "."
 
   if not CheckSanity(func):
-    return GetFuncDesc(func)
+    thisSummary["failFuncs"].append(head + func["name"])
+    printErr("Can't transfer: " + GetFuncDesc(func))
+    s = \
+'''
+%s
+//Can not be transfered!
+''' % GetFuncDesc(func)
+    return s
 
+  thisSummary["succFuncs"].append(head + func["name"])
   s = GenMethodHead(className, func)
   s += AddIndent(GenArgTrans(func), 4)
   s += AddIndent(GenMethodCall(func, className), 4)
@@ -474,11 +510,15 @@ def GenClass(className, c):
   s += GenClassInit(className, funcs)
   return s
 
-def GenInit(cppHeader):
+def GetInitName(module):
+  return "Init%s" % module
+
+def GenInit(module, cppHeader):
   s = \
 '''
-void Init(Handle<Object> exports, Handle<Object> module) {
-'''
+void %s(Handle<Object> exports, Handle<Object> module) {
+''' % GetInitName(module)
+
   for c in cppHeader.classes:
     classT = cppHeader.classes[c]
     if (classT["abstract"] == False) and (classT['declaration_method'] == "class"):
@@ -544,6 +584,18 @@ def GenModuleDecl(module, cppHeader):
 #include "%s.h"
 
 using namespace v8;
+
+#ifndef V8_ASSERT
+#define V8_ASSERT(cond, ...) \
+    if(!(cond)) {  \
+        char buffer[512]; \
+        sprintf(buffer, __VA_ARGS__); \
+        V8_EXCEPTION(buffer); \
+        return scope.Close(Undefined()); \
+    }
+#endif
+
+
 ''' % (module.upper(), module.upper(), module)
   
   for c in cppHeader.classes:
@@ -557,65 +609,206 @@ using namespace v8;
 def GenModule(module, cppHeader):
 
   s = '#include "%s_addon.h"\n' % module
-  
-  if DEBUG == 1:
-    print ">>>>Begin: gen Class"
 
   for c in cppHeader.classes:
     classT = cppHeader.classes[c]
     if (classT["abstract"] == False) and (classT['declaration_method'] == "class"):
       s += GenClass(c, cppHeader.classes[c])
   
-  if DEBUG == 1:
-    print "<<<<End: gen Class"
-    print ">>>>Begin: gen function"
-
   for func in cppHeader.functions:
     s += GenFunc(func)
-
-  if DEBUG == 1:
-    print "<<<<End: gen func"
-    print ">>>>Begin: set Member func"
   
   s += GenSetMemberFunc(cppHeader.functions)
-
-  if DEBUG == 1:
-    print "<<<<End: set Member func"
-    print ">>>>Begin: gen const"
   
   s += GenConst(cppHeader.defines)
+   
+  s += GenInit(module, cppHeader)
  
-  if DEBUG == 1:
-    print "<<<<End: gen const"
-    print ">>>>Begin: gen init"
-  
-  s += GenInit(cppHeader)
-
-  if DEBUG == 1:
-    print "<<<<End: gen init"
-  #tail
-  s += \
-'''
-NODE_MODULE(%s, Init)
-'''% module.replace("-", "_")
-  
-  if DEBUG == 1:
-    print "<<End: gen Class"
-
   return s
 
-def GenC(module, cppHeader):
-  if DEBUG == 1:
-    print ">>Start: gen Module."
+def GenGlobalDecl(module):
+  s = "extern %s(Handle<Object> exports, Handle<Object> module);\n" \
+      % GetInitName(module)
+  return s
 
-  f = OUTPUT_DEV_PATH + "/" + module + "_addon.cpp"
+def GenGlobalInit(module):
+  s = "    %s(exports, module);\n" % GetInitName(module)
+  return s
+
+def GenPreGlobalInit():    
+  s = \
+'''
+#include <node.h>
+#include <v8.h>
+#include "%s"
+
+using namespace v8;
+
+void init(Handle<Object> exports) {
+
+''' % EXPORT_DEF
+  f = OUTPUT_DEV_PATH + "/" + EXPORT_CPP
+  printDbg("generateing " + f)
+  fp = open(f, "w")
+  fp.write(s)
+  fp.close()  
+  
+  m = EXPORT_DEF.replace('.', '_').upper()
+  s = \
+'''
+#ifndef %s
+#define %s
+
+''' % (m, m)
+  f = OUTPUT_DEV_PATH + "/" + EXPORT_DEF
+  printDbg("generateing " + f)
+  fp = open(f, "w")
+  fp.write(s)
+  fp.close()  
+
+def GenPostGlobalInit():
+  s = \
+'''
+}
+
+NODE_MODULE(%s, init)
+''' % EXPORT_MODULE
+  f = OUTPUT_DEV_PATH + "/" + EXPORT_CPP
+  printDbg("finished " + f)
+  fp = open(f, "a+")
+  fp.write(s)
+  fp.close()  
+
+  s = \
+'''
+#endif
+''' 
+  f = OUTPUT_DEV_PATH + "/" + EXPORT_DEF
+  printDbg("finished " + f)
+  fp = open(f, "a+")
+  fp.write(s)
+  fp.close()  
+
+def GenC(module, cppHeader):
+
+  global summary
+  global thisSummary
+  thisSummary = {"succFuncs":[], "failFuncs": [], "cpp":[], "h":[]}
+
+  printDbg("transfering " + module)
+  
+  target =  module + "_addon.cpp"  
+  f = OUTPUT_DEV_PATH + "/" + target
+  thisSummary["cpp"].append(target)
   fp = open(f, "w")  
   fp.write(GenModule(module, cppHeader))
+  fp.close()
 
-  print "generate " + f
+  printDbg("generate " + f)
 
-  f = OUTPUT_DEV_PATH + "/" + module + "_addon.h"
+  target = module + "_addon.h"
+  f = OUTPUT_DEV_PATH + "/" + target
+  thisSummary["h"].append(target)  
   fp = open(f, "w")  
   fp.write(GenModuleDecl(module, cppHeader))
+  fp.close()
+  printDbg("generate " + f)
 
-  print "generate " + f
+  f = OUTPUT_DEV_PATH + "/" + EXPORT_DEF  
+  fp = open(f, "a+")
+  fp.write(GenGlobalDecl(module))
+  fp.close()
+
+  f = OUTPUT_DEV_PATH + "/" + EXPORT_CPP  
+  fp = open(f, "a+")
+  fp.write(GenGlobalInit(module))
+  fp.close()
+  
+  summary[module] = thisSummary
+  printDbg("generate " + f)
+
+def DumpFunctionSummary():
+  global summary
+  totalSucc = 0
+  totalFail = 0
+  fmt = "%-15s:   +%-4d -%-4d\n"
+  s = "\nSummary of translated functions\n"
+  s += "================================\n"
+  for idx in summary:
+    item = summary[idx]
+    totalSucc += len(item["succFuncs"])
+    totalFail += len(item["failFuncs"])
+    s += fmt % (idx, len(item["succFuncs"]), len(item["failFuncs"]))    
+  s += "================================\n"
+  
+  s += fmt % ("total", totalSucc, totalFail)
+  printLog(s)
+
+def DumpFileSummary():
+  global summary
+  totalC = 0
+  totalH = 0  
+
+  for idx in summary:
+    item = summary[idx]  
+    totalC += len(item["cpp"])
+    totalH += len(item["h"])    
+  fmt = "%-8s:  %s\n"
+  s = "\nSummary of created files\n"
+  s += "================================\n" 
+  #dont forget EXPORT_DEF and EXPORT_CPP
+  s += fmt % ("module", EXPORT_MODULE)
+  s += fmt % ("path", OUTPUT_DEV_PATH)
+  s += fmt % ("export", EXPORT_CPP)
+  s += fmt % ("cpp", totalC)
+  s += fmt % ("h", totalH)
+  s += fmt % ("gyp", GYP_PATH + GYP_FILE)
+  s += "================================\n"
+  
+  printLog(s)
+
+def DumpSummary():
+  DumpFileSummary()
+  DumpFunctionSummary()  
+
+def GenGyp():
+  f = GYP_PATH + GYP_FILE
+  fp = open(f, "w")
+  fp.write(BuildGyp())
+  fp.close()
+
+def BuildGyp():
+  files = ""
+
+  for idx in summary:
+    item = summary[idx]
+    for f in item["cpp"]:
+      files += "'" + GYP_SRC_PATH + f + "',\n"
+  
+  files = AddIndent(files, 6)
+
+  return \
+'''
+#skeleton of node-gyp file
+
+{
+  'targets' : [{
+
+    'target_name' : '%s',
+
+    'sources' : [
+%s    
+    ],
+
+    'include_dirs' : [
+      '%s'
+    ],
+
+    'libraries' : [
+      #'-L/io/library/path/,
+      #'-liolib'
+    ]
+
+  }]
+}
+''' % (EXPORT_MODULE, files, GYP_SRC_PATH)

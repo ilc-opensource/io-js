@@ -102,5 +102,5 @@ def GenJsApi(module, cppHeader):
 module.exports = %s;
 '''%(module))
 
-  print "generate " + f
+  printDbg("generate " + f)
 

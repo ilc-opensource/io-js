@@ -1,5 +1,37 @@
 import re
 from config import *
+from termcolor import colored
+
+CURR_MODULE = "-"
+
+summary = {}
+
+def SetPrintModule(m):
+  global CURR_MODULE
+  CURR_MODULE = m
+
+def UnsetPrintModule():
+  global CURR_MODULE
+  CURR_MODULE = "-"
+
+def printDbg(str):
+  if not DEBUG:
+    return
+
+  print colored("[%s][dbg] " % CURR_MODULE + str, "blue")
+
+def printLog(str):
+  print colored(str, "green")
+
+def printVerb(str):
+  print "[%s][veb] " % CURR_MODULE + str
+
+def printWarn(str):
+  print colored("[%s][warn] " % CURR_MODULE + str, "yellow")
+
+def printErr(str):
+  print colored("[%s][err] " % CURR_MODULE + str, "red")
+
 
 reNum = re.compile('[-+]?[1-9]\d*\.\d+|-?0\.\d*[1-9]\d*')
 reInt = re.compile('[-+]?\d*')
@@ -14,6 +46,7 @@ C2V8 = { \
 
 #link other types
 C2V8["char"] = C2V8["int"]
+C2V8["byte"] = C2V8["int"]
 C2V8["long"] = C2V8["int"]
 C2V8["boolean"] = C2V8["bool"]
 
@@ -39,14 +72,10 @@ def GetIdenticalType(t):
     if t.replace(" ","") == "char*":
       t = "char*"
 
-  if f != t and DEBUG == 1 :
-    print "Before t %s" %(f)
-    print "After t %s" %(t)
   return t;
 
 def GetV8Type(t):
-  t = GetIdenticalType(t);
-  print "converted " + t
+  t = GetIdenticalType(t);  
   if t == "void":
     return True
 
@@ -88,29 +117,24 @@ def CheckSanity(func):
   #  return True
   
   if func["pure_virtual"]:
-    print "pure virtual function."
+    printDbg("pure virtual function is not allowed")
     return False
   
   if re.match(r"operator.*", func["name"]):
-    print '''
-[Error] Func %s is not converted''' %(func["name"])
+    printDbg("Func %s is not converted" %(func["name"]))
     return False
 
   if not GetV8Type(func["rtnType"]):
-    print '''
-[Error]Func %s return type: %s can't transfer to V8''' %(func["name"], func["rtnType"])
+    printDbg("Func %s return type: %s can't transfer to V8" %(func["name"], func["rtnType"]))
     return False
 
-  for arg in func["parameters"]:
-    print arg["type"]
+  for arg in func["parameters"]:    
     if not GetV8Type(arg["type"]):
-      print '''
-[Error]Func %s arg type: %s can't transfer to V8''' %(func["name"], arg["type"])
+      printDbg("Func %s arg type: %s can't transfer to V8" %(func["name"], arg["type"]))
       return False
 
   if not GetV8Type(func["rtnType"]):
-    print '''
-[Error]Func %s return type: %s can't transfer to V8''' %(func["name"], func["rtnType"])
+    printDbg("Func %s return type: %s can't transfer to V8" %(func["name"], func["rtnType"]))
     return False
 
   return True

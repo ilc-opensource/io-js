@@ -7,6 +7,13 @@ INPUT_DECL_PATHS  = [
 OUTPUT_COMP_PATH     = '../../lib/companion'
 OUTPUT_DEV_PATH      = '../../lib/device/src'
 OUTPUT_CMD_MAP_PATH  = '../../lib/dispatcher/map'
+EXPORT_DEF           = 'main.h'
+EXPORT_CPP           = 'main.cpp'
+EXPORT_MODULE        = 'galileo'
 
-DEBUG = 0
+GYP_PATH             = '../../lib/device/'
+GYP_SRC_PATH         = 'src/' #the relative path of GYP_SRC_PATH to OUTPUT_DEV_PATH from 
+GYP_FILE             = 'binding.gyp'
+
+DEBUG = 1
 

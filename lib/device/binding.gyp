@@ -1,24 +1,28 @@
+
+#skeleton of node-gyp file
+
 {
   'targets' : [{
 
-    'target_name' : 'arduiPIA',
+    'target_name' : 'galileo',
 
     'sources' : [
-      './src/arduiPIA.cpp'
+      'src/Sample_addon.cpp',
+      'src/arduiPIA_addon.cpp',
+      'src/MultiClass_addon.cpp',
+      'src/Servo_addon.cpp',
+      'src/Arduino_addon.cpp',
+          
     ],
 
     'include_dirs' : [
-      '../../c_decl',
-      '../../../pia-sdk-repo/iolib/core',
-      '../../../pia-sdk-repo/iolib/lib',
-      '../../../pia-sdk-repo/iolib/board',
-      '../../../pia-sdk-repo/iolib/arduino',
-      '../../../pia-sdk-repo/iolib/drv'
+      'src/'
     ],
 
     'libraries' : [
-      '-L../../../../pia-sdk-repo/iolib',
-      '-lpia-iolib'
+      #'-L/io/library/path/,
+      #'-liolib'
     ]
+
   }]
 }
