@@ -35,7 +35,10 @@ def HandleHeader(root, f):
 
   #to handle the override functions
   for c in cppHeader.classes:
-    GroupFunc(cppHeader.classes[c]["methods"]["public"])
+    FormalizeFunc(cppHeader.classes[c]["methods"]["public"])
+    GroupFunc(cppHeader.classes[c]["methods"]["public"])    
+
+  FormalizeFunc(cppHeader.functions)
   GroupFunc(cppHeader.functions)
 
   GenJsApi(split[0], cppHeader)
@@ -47,12 +50,11 @@ if __name__ == "__main__":
 
   GenPreGlobalInit()
 
-  for i in range (len(INPUT_DECL_PATHS)):
-    printDbg("searching " +INPUT_DECL_PATHS[i])
-    for root, dirs, files in os.walk(INPUT_DECL_PATHS[i]):
+  for p in INPUT_DECL_PATHS:
+    printDbg("searching " + p)
+    for root, dirs, files in os.walk(p):
       for f in files:
         HandleHeader(root, f)
-        print ""
 
   GenPostGlobalInit()
   GenGyp()

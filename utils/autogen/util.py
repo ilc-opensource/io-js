@@ -41,7 +41,7 @@ C2V8 = { \
   "unsigned int": ["Uint32", "ToUint32", "Uint32Value", "unsigned int", "IsUint32" ], \
   "float": ["Number", "ToNumber", "NumberValue", "float", "IsNumber"], \
   "bool" : ["Boolean", "ToBoolean", "BooleanValue", "bool", "IsBoolean"], \
-  "char*": ["v8::String", "ToString", "", "char*", "IsObject"] \
+  "char*": ["v8::String", "ToString", "", "char*", "IsString"] \
 }
 
 #link other types

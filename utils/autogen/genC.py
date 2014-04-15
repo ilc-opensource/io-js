@@ -70,7 +70,7 @@ def GenArgList(func, withType):
     if withType: 
       s += "%s %s" % (arg["type"], argName)
     else:
-      s += "%s" % argName
+      s += "%s" % (argName)
 
     if idx != (len(args) - 1):
       s += ", "
@@ -110,17 +110,18 @@ V8_ASSERT(%s, "parameters error!");
     if arg["type"] == "void":
       continue
     argName = GenArgName(idx, args)
-    argType = GetIdenticalType(arg["type"])
+    argType = arg["type"]
+    argUniqType = GetIdenticalType(argType)
 
-    if argType == "char*":
+    if argUniqType == "char*":
       s += \
-'''v8::String::AsciiValue strVal(%s->ToString());
-%s %s = (%s)*strVal;
-'''% (GenArgArrayName(idx), arg["type"], argName, arg["type"])
+'''v8::String::AsciiValue %sStr(%s->ToString());
+%s %s = (%s)*%sStr;
+'''% (argName, GenArgArrayName(idx), argType, argName, argType, argName)
     else:
       s += \
-'''%s %s = %s;
-'''% (argType, argName, GetCValue(GenArgArrayName(idx), argType))
+'''%s %s = (%s)%s;
+'''% (argUniqType, argName, argUniqType, GetCValue(GenArgArrayName(idx), argUniqType))
   return s
 
 def GenCall(func):
@@ -516,7 +517,7 @@ def GetInitName(module):
 def GenInit(module, cppHeader):
   s = \
 '''
-void %s(Handle<Object> exports, Handle<Object> module) {
+void %s(Handle<Object> exports) {
 ''' % GetInitName(module)
 
   for c in cppHeader.classes:
@@ -584,13 +585,15 @@ def GenModuleDecl(module, cppHeader):
 #include "%s.h"
 
 using namespace v8;
+
 #ifndef V8_EXCEPTION
 #define V8_EXCEPTION(info) { \\
     v8::ThrowException(Exception::Error(v8::String::New(info))); \\
     }
 #endif
+
 #ifndef V8_ASSERT
-#define V8_ASSERT(cond, ...)  \\
+#define V8_ASSERT(cond, ...) \\
     if(!(cond)) {  \\
         char buffer[512]; \\
         sprintf(buffer, __VA_ARGS__); \\
@@ -631,24 +634,20 @@ def GenModule(module, cppHeader):
   return s
 
 def GenGlobalDecl(module):
-  s = "extern %s(Handle<Object> exports, Handle<Object> module);\n" \
+  s = "extern void %s(Handle<Object> exports);\n" \
       % GetInitName(module)
   return s
 
 def GenGlobalInit(module):
-  s = "    %s(exports, module);\n" % GetInitName(module)
+  s = "    %s(exports);\n" % GetInitName(module)
   return s
 
 def GenPreGlobalInit():    
   s = \
 '''
-#include <node.h>
-#include <v8.h>
 #include "%s"
 
-using namespace v8;
-
-void init(Handle<Object> exports) {
+void exportV8(Handle<Object> exports) {
 
 ''' % EXPORT_DEF
   f = OUTPUT_DEV_PATH + "/" + EXPORT_CPP
@@ -663,6 +662,11 @@ void init(Handle<Object> exports) {
 #ifndef %s
 #define %s
 
+#include <node.h>
+#include <v8.h>
+
+using namespace v8;
+
 ''' % (m, m)
   f = OUTPUT_DEV_PATH + "/" + EXPORT_DEF
   printDbg("generateing " + f)
@@ -675,7 +679,7 @@ def GenPostGlobalInit():
 '''
 }
 
-NODE_MODULE(%s, init)
+NODE_MODULE(%s, exportV8)
 ''' % EXPORT_MODULE
   f = OUTPUT_DEV_PATH + "/" + EXPORT_CPP
   printDbg("finished " + f)
@@ -693,6 +697,12 @@ NODE_MODULE(%s, init)
   fp.write(s)
   fp.close()  
 
+def FormalizeFunc(funcs):
+  for f in funcs:    
+    args = f["parameters"]
+    if len(args) == 1 and args[0]["type"] == "void":
+      f["parameters"] = []
+    
 def GenC(module, cppHeader):
 
   global summary
@@ -735,7 +745,7 @@ def DumpFunctionSummary():
   global summary
   totalSucc = 0
   totalFail = 0
-  fmt = "%-15s:   +%-4d -%-4d\n"
+  fmt = "%-20s:   +%-4d -%-4d\n"
   s = "\nSummary of translated functions\n"
   s += "================================\n"
   for idx in summary:
@@ -789,6 +799,7 @@ def BuildGyp():
     for f in item["cpp"]:
       files += "'" + GYP_SRC_PATH + f + "',\n"
   
+  files += "'" + GYP_SRC_PATH + EXPORT_CPP + "'\n"
   files = AddIndent(files, 6)
 
   inc = ""
@@ -814,15 +825,13 @@ def BuildGyp():
 %s
     ],
 
-    'cflags' : [
-      '-fpermissive',
-    ],
-
     'libraries' : [
       #'-L/io/library/path/,
       #'-liolib'
-    ]
+    ],
 
+    'includes': ['ext.gypi']
+     
   }]
 }
 ''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc)

@@ -1,7 +1,8 @@
 INPUT_DECL_PATHS  = [
-  "../../arduino-1.5.3/hardware/arduino/x86/cores/arduino/", 
-  "../../arduino-1.5.3/hardware/arduino/x86/variants/galileo_fab_c/",
-  "../../c_decl/"
+#  "../../../arduino-1.5.3/hardware/arduino/x86/cores/arduino/", 
+#  "../../../arduino-1.5.3/hardware/arduino/x86/variants/galileo_fab_c/",
+#  "../../c_decl/"
+  "../../../libio/export"
 ]
 
 OUTPUT_COMP_PATH     = '../../lib/companion'
@@ -15,5 +16,5 @@ GYP_PATH             = '../../lib/device/'
 GYP_SRC_PATH         = 'src/' #the relative path of GYP_SRC_PATH to OUTPUT_DEV_PATH from 
 GYP_FILE             = 'binding.gyp'
 
-DEBUG = 1
+DEBUG = 0   
 

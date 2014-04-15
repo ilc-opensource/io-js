@@ -1,0 +1,17 @@
+{
+  "author" : "Zhanglin Liu <zhanglin.liu@intel.com>",
+
+  "name"   : "io-node",
+
+  "description" : "JS binding for IO library",
+
+  "version" : "0.0.1",
+
+  "main"   : "index.js",
+
+  "dependencies" : {
+    "bindings": "*"
+  }
+}
+
+
