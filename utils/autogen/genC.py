@@ -35,9 +35,9 @@ def GenSetFunc(obj, func):
 
 def GetFuncDesc(func):
   if func.has_key("override") and func["override"]:
-    s = "//%s" % func["name"]
+    s = "// %s" % func["name"]
   else:
-    s = "//%d: %s"% (func["line_number"], func["debug"])
+    s = "// %d: %s"% (func["line_number"], func["debug"])
 
   return s
 
@@ -161,6 +161,8 @@ static void SetConst(Handle<Object> obj) {
 
     if IsInt(macros[1]):
       s += "             Int32::New(%s));\n"% macros[1]
+    elif (IsString(macros[1])):
+      s += "             v8::String::New(%s));\n"% macros[1]
     else:
       s += "             Number::New(%s));\n"% macros[1]
 
@@ -226,7 +228,7 @@ def GenConstructor(name, func):
     return ""
   s = \
 '''
-//constructor
+// constructor
 %s::%s(%s) {
     m_val = new %s(%s);
 }
@@ -343,7 +345,7 @@ def GenMethod(className, func):
     s = \
 '''
 %s
-//Can not be transfered!
+// Can not be transfered!
 ''' % GetFuncDesc(func)
     return s
 

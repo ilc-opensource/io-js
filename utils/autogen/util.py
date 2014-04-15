@@ -33,8 +33,10 @@ def printErr(str):
   print colored("[%s][err] " % CURR_MODULE + str, "red")
 
 
-reNum = re.compile('[-+]?[1-9]\d*\.\d+|-?0\.\d*[1-9]\d*')
-reInt = re.compile('[-+]?\d*')
+reFloat = re.compile('[-+]?[1-9]\d*\.\d*[f|F]?|-?0\.\d*[1-9]\d*[f|F]?')
+reEFloat = re.compile('[-+]?[1-9]\d*\.?\d*[e|E][+|-]?\d*|-?0\.\d*[1-9]\d*[e|E][+|-]?\d*')
+reInt = re.compile('[-+]?[0]?[x|X]?\d*[u|U]?[l|L]?[l|L]?')
+reString = re.compile('\".*\"|\'.*\'', re.M and re.S)
 
 C2V8 = { \
   "int": ["Int32", "ToInt32", "IntegerValue", "int", "IsInt32"], \
@@ -139,8 +141,16 @@ def CheckSanity(func):
 
   return True
 
-def IsNum(s):
-  m = reNum.match(s)
+def IsEFloat(s):
+  m = reEFloat.match(s)
+  return m and m.end() == len(s)
+
+def IsFloat(s):
+  m = reFloat.match(s)
+  return m and m.end() == len(s)
+
+def IsString(s):
+  m = reString.match(s)
   return m and m.end() == len(s)
 
 def IsInt(s):
@@ -148,11 +158,11 @@ def IsInt(s):
   return m and m.end() == len(s)
 
 def IsValidMacro(defines):
-  macros = defines.split("//")[0].split()
+  macros = defines.split("//")[0].split(" ", 1)
   if len(macros) != 2:
     return []
 
-  if macros[1].isdigit() or IsNum(macros[1]):
+  if IsInt(macros[1]) or IsString(macros[1]) or IsFloat(macros[1]) or IsEFloat(macros[1]):
     return macros 
 
   return []
