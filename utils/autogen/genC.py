@@ -799,6 +799,8 @@ def BuildGyp():
   for idx in summary:
     item = summary[idx]
     for f in item["cpp"]:
+      if f == "version_export_addon.cpp":
+        files += "'" + GYP_SRC_PATH + "version_export.cpp',\n"
       files += "'" + GYP_SRC_PATH + f + "',\n"
   
   files += "'" + GYP_SRC_PATH + EXPORT_CPP + "'\n"

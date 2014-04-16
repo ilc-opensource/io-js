@@ -26,6 +26,10 @@ def HandleHeader(root, f):
     printDbg(f + ' is not header file')
     return
 
+  if f == "version_export.h":
+    fcpp = root + "/version_export.cpp"
+    os.system("cp " + fcpp + " " + OUTPUT_DEV_PATH)
+
   # init debug output
   SetPrintModule(f)
 
