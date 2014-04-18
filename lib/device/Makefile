@@ -1,5 +1,14 @@
 ARDUINO_REL_PATH =../../../arduino-1.5.3
-ARCH = $(shell uname -m)
+MACHINE_TYPE = $(shell getconf LONG_BIT)
+ifeq ($(MACHINE_TYPE), 32)
+  ARCH = i586
+else
+  ifeq ($(MACHINE_TYPE), 64)
+    ARCH = x86_64
+  else
+    $(error Error machine type: $(MACHINE_TYPE))
+  endif
+endif
 ARDUINO_PATH = $(shell pwd)/$(ARDUINO_REL_PATH)
 SYSROOT=$(ARDUINO_PATH)/hardware/tools/sysroots/i586-poky-linux-uclibc
 export CC=$(ARDUINO_PATH)/hardware/tools/sysroots/$(ARCH)-pokysdk-linux/usr/bin/i586-poky-linux-uclibc/i586-poky-linux-uclibc-gcc --sysroot=$(SYSROOT) -m32 -march=i586 -w -ffunction-sections -f data-sections -MMD -DARDUINO=153
