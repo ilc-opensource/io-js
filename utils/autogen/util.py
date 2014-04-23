@@ -130,7 +130,11 @@ def CheckSanity(func):
     printDbg("Func %s return type: %s can't transfer to V8" %(func["name"], func["rtnType"]))
     return False
 
-  for arg in func["parameters"]:    
+  for arg in func["parameters"]:
+    if arg["array"] == 1:
+      printDbg("Func %s arg type: %s[] can't transfer to V8" %(func["name"], arg["type"]))
+      return False
+
     if not GetV8Type(arg["type"]):
       printDbg("Func %s arg type: %s can't transfer to V8" %(func["name"], arg["type"]))
       return False
@@ -158,6 +162,9 @@ def IsInt(s):
   return m and m.end() == len(s)
 
 def IsValidMacro(defines):
+  defines = defines.expandtabs(1);
+  defines = re.sub(r' +', " ", defines)
+
   macros = defines.split("//")[0].split(" ", 1)
   if len(macros) != 2:
     return []
