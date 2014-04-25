@@ -33,9 +33,11 @@ def printErr(str):
   print colored("[%s][err] " % CURR_MODULE + str, "red")
 
 
-reFloat = re.compile('[-+]?[1-9]\d*\.\d*[f|F]?|-?0\.\d*[1-9]\d*[f|F]?')
-reEFloat = re.compile('[-+]?[1-9]\d*\.?\d*[e|E][+|-]?\d*|-?0\.\d*[1-9]\d*[e|E][+|-]?\d*')
-reInt = re.compile('[-+]?[0]?[x|X]?\d*[u|U]?[l|L]?[l|L]?')
+reFloat = re.compile('[-+]?[1-9]\d*\.\d*[fF]?|-?0\.\d*[1-9]\d*[fF]?')
+reEFloat = re.compile('[-+]?[1-9]\d*\.?\d*[eE][+-]?\d*|-?0\.\d*[1-9]\d*[eE][+-]?\d*')
+reHexInt = re.compile('[-+]?0[xX][0-9a-fA-F]+[uU]?[lL]?[lL]?')
+reOctInt = re.compile('[-+]?[1-9][0-9]*[uU]?[lL]?[lL]?')
+reDecInt = re.compile('[-+]?0[0-7]*[uU]?[lL]?[lL]?')
 reString = re.compile('\".*\"|\'.*\'', re.M and re.S)
 
 C2V8 = { \
@@ -158,8 +160,16 @@ def IsString(s):
   return m and m.end() == len(s)
 
 def IsInt(s):
-  m = reInt.match(s)
-  return m and m.end() == len(s)
+  m = reHexInt.match(s)
+  if m and m.end() == len(s):
+    return True
+  m = reDecInt.match(s)
+  if m and m.end() == len(s):
+    return True
+  m = reOctInt.match(s)
+  if m and m.end() == len(s):
+    return True
+  return False
 
 def IsValidMacro(defines):
   defines = defines.expandtabs(1);
@@ -168,6 +178,9 @@ def IsValidMacro(defines):
   macros = defines.split("//")[0].split(" ", 1)
   if len(macros) != 2:
     return []
+
+  macros[0] = macros[0].strip()
+  macros[1] = macros[1].strip()
 
   if IsInt(macros[1]) or IsString(macros[1]) or IsFloat(macros[1]) or IsEFloat(macros[1]):
     return macros 
