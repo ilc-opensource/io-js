@@ -3,12 +3,11 @@ from util import *
 
 def GenArgsMap(args):
   if len(args) == 0:
-    s = '\n"parameters": []'
+    s = '"parameters": []'
     return s
 
   s = \
-'''
-"parameters": [
+'''"parameters": [
 '''
   for idx, arg in enumerate(args):
     argName = arg["name"]
@@ -19,29 +18,39 @@ def GenArgsMap(args):
 '''  {
     "name": "%s",
     "type": "%s"
-  }'''%(argName, arg["type"]) 
-    
-    if idx == len(args) - 1:
-      s += "\n"
-    else:
-      s += ",\n"
-
-  s += "]"
+  },
+'''%(argName, GetV8Type(arg["type"])) 
+  
+  s = RemoveLastComma(s)
+  s += "\n]"
   return s
+
+def GenRetMap(ret):
+  if ret == "":
+    return '"return": []'
+  else:
+    return '"return": ["%s"]' % (GetV8Type(ret))
 
 def GenFuncMap(module, func):  
-  t  = '\n\n"%s": {' % func["name"]
-  t += AddIndent(GenArgsMap(func["parameters"]), 2)
-  t += ",\n"
-
-  if len(func["returns"]) == 0:
-    r = '"return":[]'
+  if func.has_key("override") and func["override"]:
+    overrideStr = "true"
+    argStr = '"parameters": []'
+    retStr = '"return":[]'
   else:
-    r = '"return": ["%s"]' % (func["returns"])
-  t += AddIndent(r, 2)
-  t += '\n}'
-  s = AddIndent(t, 2)    
-  return s
+    overrideStr = "false"
+    argStr = GenArgsMap(func["parameters"])
+    retStr = GenRetMap(func["rtnType"])
+
+  return '''
+"%s": {
+  "override" : %s,
+%s,
+%s
+},
+''' % (func["name"], \
+       overrideStr, \
+       AddIndent(argStr, 2), \
+       AddIndent(retStr, 2))
 
 def GenPropertyMap(props):
   s = ''
@@ -57,63 +66,78 @@ def GenPropertyMap(props):
   return s
 
 def GenClassMap(module, name, c):
-  s = '\n\n"properties": ['
-  s += GenPropertyMap(c["properties"]["public"])
-  s += '\n]\n'
 
-  s += '\n"methods": {'
+  mapStr = GenPropertyMap(c["properties"]["public"])
+
+  methodStr = ''
   methods = c["methods"]["public"]
-  
   for m in methods:
-    s += GenFuncMap(module, m)
-    s += ','
+    methodStr += GenFuncMap(module, m)
 
-  s = RemoveLastComma(s)
-  s += '\n}'
-  return s
+  methodStr = RemoveLastComma(methodStr)
+  
+  return '''
+"%s" : {
+
+  "properties": [
+%s
+  ],
+
+  "methods" : {
+%s
+  }
+}
+'''  % (name, AddIndent(mapStr, 4), AddIndent(methodStr, 4))
 
 def GenDefineMap(defines):
-  r = "\nconstants: {"
+  s = ''
   for idx, define in enumerate(defines):
     macros = IsValidMacro(define)
     if len(macros) == 0:
       continue
-    r += AddIndent('\n"' + macros[0] + '": ' + macros[1] + ',', 2)
+    s += '"' + macros[0] + '": ' + macros[1] + ',\n'
 
-  RemoveLastComma(r)
-  r += '\n}\n'
-  return r
+  return RemoveLastComma(s)  
 
 def GenJsApiMap(module, cppHeader):
-  s = '"%s" : {'%(module)  
+
+  totalStr = ''
+
+  s = '''
+  "name" : "%s",
+''' % module
 
   #generate map of class
+  t = ''
   for c in cppHeader.classes:
-    t = AddIndent(GenClassMap(module, c, cppHeader.classes[c]), 2)
-    if c != module:
-      t = \
-'''
-"%s":{%s
-},
-''' %(c, t)
-      t = AddIndent(t, 2)
-    s += t
+    t += GenClassMap(module, c, cppHeader.classes[c])
 
-  s = RemoveLastComma(s)
+  s += '''
+  "classes" : {
+%s
+  },
+''' % AddIndent(t, 4)
+
+  #s = RemoveLastComma(s)
   
-  if len(cppHeader.defines) > 0:
-    s += ','
-    s += AddIndent(GenDefineMap(cppHeader.defines), 2)
+  t = GenDefineMap(cppHeader.defines)
+  s += '''
+  "constants" : {
+%s
+  },
+''' % AddIndent(t, 4)  
 
-  if len(cppHeader.functions) > 0:
-    s += ','
-
+  t = ''
   #generate map of functions
   for idx, func in enumerate(cppHeader.functions):
-    s += GenFuncMap(module, func)
-    s += ","
+    t += GenFuncMap(module, func)    
   
-  s = RemoveLastComma(s) + "\n}"
+  t = RemoveLastComma(t)
+  s += '''
+  "functions" : {
+%s
+  }
+''' % AddIndent(t, 4)  
   
   #generate outermost {}
   rs = "{\n"

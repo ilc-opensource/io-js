@@ -79,10 +79,10 @@ def GetIdenticalType(t):
   return t;
 
 def GetV8Type(t):
-  t = GetIdenticalType(t);  
-
-  if t == "void":
+  if t == "" or t == "void":
     return True
+
+  t = GetIdenticalType(t);  
 
   if t not in C2V8:
     return False  
@@ -188,10 +188,7 @@ def IsValidMacro(defines):
   return []
 
 def RemoveLastComma(s):
-  if s.endswith(','):
-    return s.rsplit(',', 1)[0]
-  else:
-    return s
+  return s.rsplit(',', 1)[0]
 
 
 def AddIndent(s, num):

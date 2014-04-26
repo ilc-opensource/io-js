@@ -35,8 +35,6 @@ def HandleHeader(root, f):
 
   cppHeader = ParseHeader(root + "/" + f);  
 
-  GenJsApiMap(split[0], cppHeader)
-
   #to handle the override functions
   for c in cppHeader.classes:
     FormalizeFunc(cppHeader.classes[c]["methods"]["public"])
@@ -45,6 +43,7 @@ def HandleHeader(root, f):
   FormalizeFunc(cppHeader.functions)
   GroupFunc(cppHeader.functions)
 
+  GenJsApiMap(split[0], cppHeader)
   GenJsApi(split[0], cppHeader)
   GenC(split[0], cppHeader)
   

@@ -16,5 +16,5 @@ GYP_PATH             = '../../lib/device/'
 GYP_SRC_PATH         = 'src/' #the relative path of GYP_SRC_PATH to OUTPUT_DEV_PATH from 
 GYP_FILE             = 'binding.gyp'
 
-DEBUG = 0   
+DEBUG = 1   
 

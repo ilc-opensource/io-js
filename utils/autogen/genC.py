@@ -705,6 +705,10 @@ def FormalizeFunc(funcs):
     if len(args) == 1 and args[0]["type"] == "void":
       f["parameters"] = []
     
+    rets = f["rtnType"]
+    if f["rtnType"]  == "void":
+      f["rtnType"] = ""
+    
 def GenC(module, cppHeader):
 
   global summary
