@@ -1,106 +1,101 @@
 from config import *
 from util import *
-import re
-from genC import GroupFunc
+import os
 
-def GenArgs(hdl, args):
-  for idx, arg in enumerate(args):
-    argName = arg["name"]
-    if len(argName) == 0:
-      argName = "arg%d"%(idx)
-
-    hdl.write(argName)
-    hdl.write(", ")
-  
-  if len(args) > 0:
-    hdl.seek(hdl.tell() - 2)
-    
-  hdl.write("){\n")
-
-
-def GenConst(hdl, module, const, val):
-  hdl.write(\
+def GenClassConstructor(className):
+  print className
+  return \
 '''
-%s.%s = %s;
-'''%(module, const, val))
-
-def GetFuncName(f, override):
-  fname = f['name']
-  if override:
-    fname += "With"
-    for arg in f["parameters"]:
-      t = re.sub('\s+', "",arg["type"])
-      t = t.capitalize()
-      fname += t
-
-  return fname
-
-
-def GenMethod(hdl, f, override, moduleName, className):
-  funcName = GetFuncName(f, override)
-  if className == "":
-    name_t = moduleName
-    hdl.write("\n%s.%s = function(" %(name_t, funcName))
-  else:
-    name_t = className
-    hdl.write("\n%s.prototype.%s = function(" %(name_t, funcName))
-
-  args = f["parameters"]
-  GenArgs(hdl, args)
-
-  hdl.write(\
-'''
-  console.log("%s.%s");
+%s = function() {
+  var className = "%s";
+  var funcName = "%s";
+  bridge.dump(className, funcName, arguments);
 };
-'''%(name_t, funcName))
+''' % (className, className, className)
 
-#genreate functions
-def GenFunc(hdl, func, moduleName, className):
-  if func.has_key("override") and func["override"]:
-    for f in func["funcs"]:
-      GenMethod(hdl, f, True, moduleName, className)
-  else:
-    GenMethod(hdl, func, False, moduleName, className)
-
-def GenClass(hdl, module, className, c):
-  hdl.write(\
+def GenClassMethod(className, funcName):
+  return \
 '''
-%s = function(options) {
+%s.prototype.%s = function() {
+  var className = "%s";
+  var funcName = "%s";
+  bridge.dump(className, funcName, arguments);
 };
-'''%(className))
-  
-  funcs = c["methods"]["public"]
-  for func in funcs:
-    GenFunc(hdl, func, module, className)
+''' % (className, funcName, className, funcName,)
+ 
+def GenClassJsApi(className, c):
+  methods = c["methods"]["public"];
+  s = ""
 
-  if module != className:
-    hdl.write("\n%s.%s = %s\n"%(module, className, className))
+  for m in methods:
+    methodName = m["name"]
+    if m["name"] == className:
+      s += GenClassConstructor(className)
+    else:
+      s += GenClassMethod(className, methodName)
     
-def GenJsApi(module, cppHeader):
-  f = OUTPUT_COMP_PATH + "/" + module + ".js"
+  s += \
+'''
+module.exports.%s = %s;
+''' % (className, className)
+  
+  return s
 
-  fp = open(f, "w")
-
-  for c in cppHeader.classes:
-    GenClass(fp, module, c, cppHeader.classes[c])
-
-  #gen external functions
-  for func in cppHeader.functions:
-    GenFunc(fp, func, module, "")
-
-  #gen constant
-  for define in cppHeader.defines:
-
+def GenJsConst(defines):
+  s =''
+  for define in defines:
     macros = IsValidMacro(define)
-
-    if len(macros) != 0:
-      GenConst(fp, module, macros[0], macros[1])
-
-  #end of module
-  fp.write(\
+    if len(macros) == 0:
+      continue
+    s += \
 '''
-module.exports = %s;
-'''%(module))
+module.exports.%s = %s;
+''' % (macros[0], macros[1])
+  return s
 
-  printDbg("generate " + f)
+def GenPreFuncJsApi():
+  f = OUTPUT_COMP_PATH + "/" + "index.js"
+  fp = open(f, "w")
+  s = \
+'''
+var bridge = require("./bridge.js");
+
+/*********************************************
+Generated with autogen tool
+*********************************************/
+''' 
+  fp.write(s)
+
+def GenFuncJsApi(module, func):
+  funcName = func["name"]
+  return \
+'''
+module.exports.%s = function() {
+  var className = undefined;
+  var funcName = "%s";
+  bridge.dump(className, funcName, arguments);
+};
+''' % (funcName, funcName)
+
+def GenJsApi(module, cppHeader):
+  s = \
+'''
+/****************************************
+           %s
+****************************************/
+''' % module 
+  for c in cppHeader.classes:
+    s += GenClassJsApi(module, cppHeader.classes[c])
+
+  s += GenJsConst(cppHeader.defines)
+
+  #generate map of functions
+  for idx, func in enumerate(cppHeader.functions):
+    s += GenFuncJsApi(module, func)
+
+  f = OUTPUT_COMP_PATH + "/" + "index.js"
+  fp = open(f, "a")
+  fp.write(s)
+  printDbg( "generate " + f)
+  
 

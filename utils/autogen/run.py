@@ -52,6 +52,7 @@ def HandleHeader(root, f):
 if __name__ == "__main__":
 
   GenPreGlobalInit()
+  GenPreFuncJsApi()
 
   for p in INPUT_DECL_PATHS:
     printDbg("searching " + p)
