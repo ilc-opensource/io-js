@@ -3,26 +3,38 @@ from util import *
 import os
 
 def GenClassConstructor(className):
-  print className
   return \
 '''
 %s = function() {
-  var className = "%s";
-  var funcName = "%s";
-  bridge.dump(className, funcName, arguments);
+  return submit.classReq('%s', arguments);
 };
+''' % (className, className)
+
+def GenClassConstructorMap(className):
+  return \
+'''
+  '%s': function() {
+    handle.classReq(io.%s, arguments, '%s');
+  },
 ''' % (className, className, className)
 
 def GenClassMethod(className, funcName):
   return \
 '''
 %s.prototype.%s = function() {
-  var className = "%s";
-  var funcName = "%s";
-  bridge.dump(className, funcName, arguments);
+  return submit.classMethodReq('%s', '%s', arguments);
 };
-''' % (className, funcName, className, funcName,)
+''' % (className, funcName, className, funcName)
  
+def GenClassMethodMap(className, funcName):
+  return \
+'''
+  '%s.%s': function() {
+    handle.classMethodReq(arguments, %s, %s);
+  },
+''' % (className, funcName, className, funcName)
+
+
 def GenClassJsApi(className, c):
   methods = c["methods"]["public"];
   s = ""
@@ -36,9 +48,21 @@ def GenClassJsApi(className, c):
     
   s += \
 '''
-module.exports.%s = %s;
+Frame.prototype.%s = %s;
 ''' % (className, className)
-  
+  return s
+
+def GenClassJsApiMap(className, c):
+  methods = c["methods"]["public"];
+  s = ""
+
+  for m in methods:
+    methodName = m["name"]
+    if m["name"] == className:
+      s += GenClassConstructorMap(className)
+    else:
+      s += GenClassMethodMap(className, methodName)
+
   return s
 
 def GenJsConst(defines):
@@ -49,53 +73,129 @@ def GenJsConst(defines):
       continue
     s += \
 '''
-module.exports.%s = %s;
+Frame.prototype.%s = %s;
 ''' % (macros[0], macros[1])
   return s
 
 def GenPreFuncJsApi():
-  f = OUTPUT_COMP_PATH + "/" + "index.js"
+  f = OUTPUT_COMP_PATH + "/" + "frame.js"
   fp = open(f, "w")
   s = \
 '''
-var bridge = require("./bridge.js");
+(function(exports, global) {
 
 /*********************************************
 Generated with autogen tool
 *********************************************/
+
+var submit = undefined;
+
+var Frame = function(submitPath) {
+  if(typeof require === 'function' && typeof module === 'object') {
+    submit = require(submitPath);
+  } else {
+    submit = global.submit;
+  }
+};
+
+exports.Frame = Frame;
 ''' 
+  fp.write(s)
+
+def GenPostFuncJsApi():
+  f = OUTPUT_COMP_PATH + "/" + "frame.js"
+  fp = open(f, "a")
+  s = \
+'''
+})(typeof exports === 'object'? exports: this, this);
+'''
+  fp.write(s)
+
+def GenPreFuncJsApiMap():
+  f = OUTPUT_SERVER_PATH + "/" + "method.js"
+  fp = open(f, "w")
+  s = \
+'''
+
+/*********************************************
+Generated with autogen tool
+*********************************************/
+
+var io = undefined;
+var handle = undefined;
+
+var methods = function(options) {
+  io = require(options.ioPath);
+  handle = require(options.handleReqPath);
+};
+
+// Generate method map for rpc server
+methods.prototype.map = {
+''' 
+  fp.write(s)
+
+def GenPostFuncJsApiMap():
+  f = OUTPUT_SERVER_PATH + "/" + "method.js"
+  fp = open(f, "a")
+  s = \
+'''
+};
+
+module.exports =  methods;
+'''
   fp.write(s)
 
 def GenFuncJsApi(module, func):
   funcName = func["name"]
   return \
 '''
-module.exports.%s = function() {
-  var className = undefined;
-  var funcName = "%s";
-  bridge.dump(className, funcName, arguments);
+Frame.prototype.%s = function() {
+  return submit.funcReq('%s', arguments);
 };
 ''' % (funcName, funcName)
 
+def GenFuncJsApiMap(module, func):
+  funcName = func["name"]
+  return \
+'''
+  '%s': function() {
+    handle.funcReq(io.%s, arguments, '%s');
+  },
+''' % (funcName, funcName, funcName)
+
 def GenJsApi(module, cppHeader):
-  s = \
+  clientStr = \
 '''
 /****************************************
            %s
 ****************************************/
 ''' % module 
-  for c in cppHeader.classes:
-    s += GenClassJsApi(module, cppHeader.classes[c])
 
-  s += GenJsConst(cppHeader.defines)
+  servStr = \
+'''
+  /****************************************
+             %s
+  ****************************************/
+''' % module 
+
+  for c in cppHeader.classes:
+    clientStr += GenClassJsApi(module, cppHeader.classes[c])
+    servStr += GenClassJsApiMap(module, cppHeader.classes[c])
+
+  clientStr += GenJsConst(cppHeader.defines)
 
   #generate map of functions
   for idx, func in enumerate(cppHeader.functions):
-    s += GenFuncJsApi(module, func)
+    clientStr += GenFuncJsApi(module, func)
+    servStr += GenFuncJsApiMap(module, func)
 
-  f = OUTPUT_COMP_PATH + "/" + "index.js"
+  f = OUTPUT_COMP_PATH + "/" + "frame.js"
   fp = open(f, "a")
-  fp.write(s)
+  fp.write(clientStr)
   printDbg( "generate " + f)
   
+  f = OUTPUT_SERVER_PATH + "/" + "method.js"
+  fp = open(f, "a")
+  fp.write(servStr)
+  printDbg( "generate " + f)
 

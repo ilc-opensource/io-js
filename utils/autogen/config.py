@@ -7,7 +7,8 @@ INPUT_DECL_PATHS  = [
 
 OUTPUT_COMP_PATH     = '../../lib/companion'
 OUTPUT_DEV_PATH      = '../../lib/device/src'
-OUTPUT_CMD_MAP_PATH  = '../../lib/dispatcher/map'
+OUTPUT_SERVER_PATH   = '../../lib/server/'
+OUTPUT_CMD_MAP_PATH  = '../../lib/map/'
 EXPORT_DEF           = 'main.h'
 EXPORT_CPP           = 'main.cpp'
 EXPORT_MODULE        = 'galileo'

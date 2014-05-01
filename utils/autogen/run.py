@@ -53,6 +53,7 @@ if __name__ == "__main__":
 
   GenPreGlobalInit()
   GenPreFuncJsApi()
+  GenPreFuncJsApiMap()
 
   for p in INPUT_DECL_PATHS:
     printDbg("searching " + p)
@@ -60,6 +61,8 @@ if __name__ == "__main__":
       for f in files:
         HandleHeader(root, f)
 
+  GenPostFuncJsApi();
+  GenPostFuncJsApiMap();
   GenPostGlobalInit()
   GenGyp()
   DumpSummary()
