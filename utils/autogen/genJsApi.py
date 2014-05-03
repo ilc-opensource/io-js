@@ -203,7 +203,7 @@ def GenJsApi(module, cppHeader):
   fp.write(clientStr)
   printDbg( "generate " + f)
   
-  f = OUTPUT_SERVER_PATH + "/" + "method.js"
+  f = OUTPUT_SERVER_PATH + "/" + TARGET +".js"
   fp = open(f, "a")
   fp.write(servStr)
   printDbg( "generate " + f)
