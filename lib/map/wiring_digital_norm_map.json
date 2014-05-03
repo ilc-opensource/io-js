@@ -1,0 +1,150 @@
+{
+  
+    "name" : "wiring_digital_norm",
+  
+    "classes" : {
+      
+    },
+  
+    "constants" : {
+      "HIGH": 0x1,
+      "LOW": 0x0,
+      "NONE": 0xFFFFFFFF,
+      "FN_GPIO_FIXED_OUTPUT": 0x02,
+      "FN_GPIO_OPENDRAIN": 0x04,
+      "FN_PWM": 0x08,
+      "FN_I2C": 0x10,
+      "FN_ANALOG": 0x20,
+      "FN_UART": 0x40,
+      "FN_SPI": 0x80,
+      "FN_PULLUP": 0x100,
+      "FN_MUX": 0x200,
+      "FN_RESERVED": 0x400,
+      "GPIO_DRIVE_PULLUP": 0,
+      "GPIO_DRIVE_STRONG": 1,
+      "GPIO_DRIVE_HIZ": 2,
+      "PIN_EINVAL": 0xFFFFFFFF,
+      "MAX_GPIO_PATH": 0x200
+    },
+  
+    "functions" : {
+      
+      "pinInit": {
+        "override" : false,
+        "parameters": [],
+        "return": []
+      },
+      
+      "pinMode": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "pin",
+            "type": "Uint32"
+          },
+          {
+            "name": "mode",
+            "type": "Uint32"
+          }
+        ],
+        "return": []
+      },
+      
+      "pinModeIRQ": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "pin",
+            "type": "Uint32"
+          },
+          {
+            "name": "mode",
+            "type": "Int32"
+          }
+        ],
+        "return": ["Int32"]
+      },
+      
+      "digitalWrite": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "pin",
+            "type": "Uint32"
+          },
+          {
+            "name": "val",
+            "type": "Uint32"
+          }
+        ],
+        "return": []
+      },
+      
+      "digitalRead": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "pin",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["Int32"]
+      },
+      
+      "pinHandleReopen": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "index",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["Int32"]
+      },
+      
+      "pinGetIndex": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "pin",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["Int32"]
+      },
+      
+      "pin2path": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "pin",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["v8::String"]
+      },
+      
+      "gpio2gpiohandle": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "gpio",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["Int32"]
+      },
+      
+      "pin2gpiohandle": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "pin",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["Int32"]
+      }
+    }
+  
+}

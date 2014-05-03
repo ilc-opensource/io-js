@@ -5,9 +5,10 @@ INPUT_DECL_PATHS  = [
   "../../../libio/export"
 ]
 
-OUTPUT_COMP_PATH     = '../../lib/companion'
+TARGET               = 'galileo'
+OUTPUT_COMP_PATH     = '../../lib/companion/lib/board/'
 OUTPUT_DEV_PATH      = '../../lib/device/src'
-OUTPUT_SERVER_PATH   = '../../lib/server/'
+OUTPUT_SERVER_PATH   = '../../lib/server/board'
 OUTPUT_CMD_MAP_PATH  = '../../lib/map/'
 EXPORT_DEF           = 'main.h'
 EXPORT_CPP           = 'main.cpp'

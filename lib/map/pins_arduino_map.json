@@ -1,0 +1,21 @@
+{
+  
+    "name" : "pins_arduino",
+  
+    "classes" : {
+      
+    },
+  
+    "constants" : {
+      "NUM_DIGITAL_PINS": 20,
+      "NUM_ANALOG_INPUTS": 6,
+      "NUM_UARTS": 0x03,
+      "NUM_SPI": 0x02,
+      "NUM_I2C": 0x01
+    },
+  
+    "functions" : {
+      
+    }
+  
+}

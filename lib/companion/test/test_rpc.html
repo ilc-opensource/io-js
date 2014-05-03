@@ -1,0 +1,43 @@
+<script src = '../lib/jquery/jquery.js'> </script>
+<script src = '../lib/jquery/jquery.whensync.js'> </script>
+<script src = '../lib/jquery/jay_jquery.js'> </script>
+<script src = '../lib/utils.js'> </script>
+<script src = '../lib/submit/rpc.js'> </script>
+<script src = '../lib/board/galileo.js'> </script>
+<script src = '../io_rpc_browser.js'> </script>
+
+<html>
+  <p id='output'></p>
+<script> 
+io.config({
+  crossDomain: true,
+  async: false,
+  url: 'http://zliu9-desk5:2000'
+});
+
+var cnt = 0;
+var ret;
+
+console.log(cnt + " start");
+ret = io.digitalRead(1, 2, function(err, res){
+  console.log(JSON.stringify(res));
+  $('#output').append(JSON.stringify(res));
+});
+console.log(JSON.stringify(ret));
+
+console.log(cnt++ + " start");
+ret = io.digitalWrite(1, 2, function(err, res){
+  console.log(JSON.stringify(res));
+  $('#output').append(JSON.stringify(res));
+});
+console.log(JSON.stringify(ret));
+
+console.log(cnt++ + " start");
+ret = io.analogRead(1, 2, function(err, res){
+  console.log(JSON.stringify(res));
+  $('#output').append(JSON.stringify(res));
+});
+console.log(JSON.stringify(ret));
+</script>
+
+</html>

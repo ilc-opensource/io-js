@@ -6,7 +6,7 @@ def GenClassConstructor(className):
   return \
 '''
 %s = function() {
-  return submit.classReq('%s', arguments);
+  return submit.classReq('%s', arguments, this);
 };
 ''' % (className, className)
 
@@ -22,7 +22,7 @@ def GenClassMethod(className, funcName):
   return \
 '''
 %s.prototype.%s = function() {
-  return submit.classMethodReq('%s', '%s', arguments);
+  return submit.classMethodReq('%s', '%s', arguments, this);
 };
 ''' % (className, funcName, className, funcName)
  
@@ -30,7 +30,7 @@ def GenClassMethodMap(className, funcName):
   return \
 '''
   '%s.%s': function() {
-    handle.classMethodReq(arguments, %s, %s);
+    handle.classMethodReq(arguments, '%s', '%s');
   },
 ''' % (className, funcName, className, funcName)
 
@@ -48,7 +48,7 @@ def GenClassJsApi(className, c):
     
   s += \
 '''
-Frame.prototype.%s = %s;
+Board.prototype.%s = %s;
 ''' % (className, className)
   return s
 
@@ -73,12 +73,12 @@ def GenJsConst(defines):
       continue
     s += \
 '''
-Frame.prototype.%s = %s;
+Board.prototype.%s = %s;
 ''' % (macros[0], macros[1])
   return s
 
 def GenPreFuncJsApi():
-  f = OUTPUT_COMP_PATH + "/" + "frame.js"
+  f = OUTPUT_COMP_PATH + "/" + TARGET +".js"
   fp = open(f, "w")
   s = \
 '''
@@ -90,20 +90,29 @@ Generated with autogen tool
 
 var submit = undefined;
 
-var Frame = function(submitPath) {
+var Board = function(options) {
+  var Submit;
   if(typeof require === 'function' && typeof module === 'object') {
-    submit = require(submitPath);
+    Submit = require(options.submitPath).Submit;
   } else {
-    submit = global.submit;
+    Submit = global.Submit;
   }
+
+  submit = new Submit(options);
+
 };
 
-exports.Frame = Frame;
+exports.Board = Board;
+
+Board.prototype.config = function(options) {
+  submit.config(options);
+};
+
 ''' 
   fp.write(s)
 
 def GenPostFuncJsApi():
-  f = OUTPUT_COMP_PATH + "/" + "frame.js"
+  f = OUTPUT_COMP_PATH + "/" + TARGET +".js"
   fp = open(f, "a")
   s = \
 '''
@@ -112,7 +121,7 @@ def GenPostFuncJsApi():
   fp.write(s)
 
 def GenPreFuncJsApiMap():
-  f = OUTPUT_SERVER_PATH + "/" + "method.js"
+  f = OUTPUT_SERVER_PATH + "/" + TARGET + ".js"
   fp = open(f, "w")
   s = \
 '''
@@ -135,7 +144,7 @@ methods.prototype.map = {
   fp.write(s)
 
 def GenPostFuncJsApiMap():
-  f = OUTPUT_SERVER_PATH + "/" + "method.js"
+  f = OUTPUT_SERVER_PATH + "/" + TARGET + ".js"
   fp = open(f, "a")
   s = \
 '''
@@ -149,7 +158,7 @@ def GenFuncJsApi(module, func):
   funcName = func["name"]
   return \
 '''
-Frame.prototype.%s = function() {
+Board.prototype.%s = function() {
   return submit.funcReq('%s', arguments);
 };
 ''' % (funcName, funcName)
@@ -189,7 +198,7 @@ def GenJsApi(module, cppHeader):
     clientStr += GenFuncJsApi(module, func)
     servStr += GenFuncJsApiMap(module, func)
 
-  f = OUTPUT_COMP_PATH + "/" + "frame.js"
+  f = OUTPUT_COMP_PATH + "/" + TARGET +".js"
   fp = open(f, "a")
   fp.write(clientStr)
   printDbg( "generate " + f)

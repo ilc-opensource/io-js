@@ -1,0 +1,22 @@
+{
+  
+    "name" : "version_export",
+  
+    "classes" : {
+      
+    },
+  
+    "constants" : {
+      
+    },
+  
+    "functions" : {
+      
+      "version_addon": {
+        "override" : false,
+        "parameters": [],
+        "return": ["v8::String"]
+      }
+    }
+  
+}

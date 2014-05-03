@@ -1,0 +1,22 @@
+{
+  
+    "name" : "version",
+  
+    "classes" : {
+      
+    },
+  
+    "constants" : {
+      
+    },
+  
+    "functions" : {
+      
+      "version": {
+        "override" : false,
+        "parameters": [],
+        "return": ["v8::String"]
+      }
+    }
+  
+}

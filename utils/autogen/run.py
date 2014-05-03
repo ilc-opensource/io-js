@@ -5,7 +5,7 @@ import CppHeaderParser
 
 from config      import *
 from genJsApi    import *
-from genJsApiMap import *
+#from genJsApiMap import *
 from genC        import *
 
 def ParseHeader(name):
@@ -43,7 +43,7 @@ def HandleHeader(root, f):
   FormalizeFunc(cppHeader.functions)
   GroupFunc(cppHeader.functions)
 
-  GenJsApiMap(split[0], cppHeader)
+  #GenJsApiMap(split[0], cppHeader)
   GenJsApi(split[0], cppHeader)
   GenC(split[0], cppHeader)
   
