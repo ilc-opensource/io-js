@@ -1,0 +1,31 @@
+<script src = '../lib/companion/lib/jquery/jquery.js'> </script>
+<script src = '../lib/companion/lib/jquery/jay_jquery.js'> </script>
+<script src = '../lib/companion/lib/utils.js'> </script>
+<script src = '../lib/companion/lib/submit/rpc.js'> </script>
+<script src = '../lib/companion/lib/board/galileo.js'> </script>
+<script src = '../lib/companion/io_rpc_browser.js'> </script>
+<script src = '../lib/common/led.js'> </script>
+
+<html>
+  <p id='output'></p>
+<script> 
+
+io.config({
+  log: true,
+  crossDomain: true,
+  async: false,
+  url: 'http://zliu9-desk5.bj.intel.com:2000'
+});
+
+io.initWithTty("/dev/tty1", "/dev/tty1", "/dev/tty1");
+
+var led = new Led({
+  io: io,
+  pin: 13
+});
+
+led.blink();
+
+</script>
+
+</html>
