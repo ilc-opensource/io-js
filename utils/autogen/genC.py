@@ -98,10 +98,11 @@ def GenArgCheck(func) :
       continue
 
     argName = GenArgArrayName(idx)
+    argBasicType = GetBasicType(arg)
 
     if (len(arg["function_pointer"]) > 0) :
       typeCheck = "IsFunction"
-    elif (arg["pointer"] == 1) or (IsStructArg(arg["type"])):
+    elif (arg["pointer"] == 1) and (argBasicType != "char"):
       typeCheck = "IsObject"
     else:
       typeCheck = GetV8TypeCheck(arg["type"]);
