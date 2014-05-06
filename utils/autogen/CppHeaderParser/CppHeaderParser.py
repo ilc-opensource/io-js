@@ -1794,12 +1794,26 @@ class _CppHeader( Resolver ):
         while stack and stack[-1].isdigit(): stack.pop()    # throw away array size for now
 
         idx = stack.index('typedef')
-        name = namespace + stack[-1]
+        # Handle function pointer typedef
+        # typedef ret_type (*fp_name)(arg0_type, .., argn_type)
+        if stack[-1] == ')':
+          for i in range (idx+1, len(stack)-4):
+            if stack[i] == '(' and stack[i+1] == '*' and stack[i+3] == ')':
+              break;
+
+          name = namespace + stack[i+2]
+          stack = stack[:i] + stack[i+4:]
+        else:
+          name = namespace + stack[-1]
+
         s = ''
         for a in stack[idx+1:-1]:
             if a == '{': break
             if not s or s[-1] in ':<>' or a in ':<>': s += a    # keep compact
             else: s += ' ' + a    # spacing
+
+        if stack[-1] == ')':
+          s += ' )';
 
         r = {'name':name, 'raw':s, 'type':s}
         if not is_fundamental(s):
