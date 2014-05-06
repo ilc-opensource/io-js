@@ -2,6 +2,8 @@ INPUT_DECL_PATHS  = [
 #  "../../../arduino-1.5.3/hardware/arduino/x86/cores/arduino/", 
 #  "../../../arduino-1.5.3/hardware/arduino/x86/variants/galileo_fab_c/",
 #  "../../c_decl/"
+#  "../../test_struct/"
+#  "../../test_fp/"
   "../../../libio/export"
 ]
 
