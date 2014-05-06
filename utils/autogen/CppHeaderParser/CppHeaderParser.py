@@ -2166,6 +2166,12 @@ class CppHeader( _CppHeader ):
                     if self.curClass: debug_print( 'CURBD %s'%self._classes_brace_level[ self.curClass ] )
 
                     if (self.braceDepth == 0) or (self.curClass and self._classes_brace_level[self.curClass]==self.braceDepth):
+                        # Handle typedef struct/union
+                        if (self.curClass in ["struct", "union"]):
+                          structName = lex.token().value;
+                          kvalue = self.classes.pop(self.curClass)
+                          self.classes[structName] = kvalue
+                          self.curClass = structName
                         trace_print( 'END OF CLASS DEF' )
                         if self.accessSpecifierStack:
                             self.curAccessSpecifier = self.accessSpecifierStack[-1]
@@ -2308,7 +2314,12 @@ class CppHeader( _CppHeader ):
         except: pass
 
         #if 'typedef' in self.nameStack: self.evaluate_typedef()        # allows nested typedefs, probably a bad idea
-        if not self.curClass and 'typedef' in self.nameStack:
+        # Handle typedef struct/union
+        if ('typedef' in self.nameStack) and (self.nameStack[1] in ["struct", "union"]):
+            debug_print( "trace" )
+            self.evaluate_class_stack()
+
+        elif not self.curClass and 'typedef' in self.nameStack:
             trace_print('STACK', self.stack)
             self.evaluate_typedef()
             return
