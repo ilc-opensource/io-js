@@ -12,11 +12,12 @@ OUTPUT_SERVER_PATH   = '../../lib/server/lib/board'
 OUTPUT_CMD_MAP_PATH  = '../../lib/map/'
 EXPORT_DEF           = 'main.h'
 EXPORT_CPP           = 'main.cpp'
+CALLBACK_DEF           = '_callback.h'
+CALLBACK_CPP           = '_callback.cpp'
 EXPORT_MODULE        = 'galileo'
 
 GYP_PATH             = '../../lib/device/'
 GYP_SRC_PATH         = 'src/' #the relative path of GYP_SRC_PATH to OUTPUT_DEV_PATH from 
 GYP_FILE             = 'binding.gyp'
 
-DEBUG = 1   
-
+DEBUG = 1

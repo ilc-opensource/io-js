@@ -1,6 +1,7 @@
 import re
 from config import *
 from termcolor import colored
+import globalVar
 
 CURR_MODULE = "-"
 
@@ -88,6 +89,12 @@ def GetV8Type(t):
     return False  
   return C2V8[t][0]
 
+def GetConvToCFunc(t):
+  t = GetIdenticalType(t);
+  if (t == 'char*'):
+    raise "Please Use other way to transform char* to String"
+  return C2V8[t][2]
+
 def GetCValue(value, t):
   t = GetIdenticalType(t);
   if (t == 'char*'):
@@ -116,35 +123,76 @@ def IsV8FuncGen(func):
       flag = True;
   return flag
 
+def GetBasicType(arg):
+  argType = arg["type"]
+  if arg.has_key("pointer") and arg["pointer"] == 1:
+    starIndex = argType.index("*")
+    argBasicType = argType[:starIndex].strip()
+  else:
+    argBasicType = argType
+  return argBasicType
+
+def IsStructArg(argType):
+  classes = globalVar.cppHeader.classes
+  return (classes.has_key(argType) and \
+          ((classes[argType]["declaration_method"] == "struct") or \
+           (classes[argType]["declaration_method"] == "typedef") and \
+            (classes[argType]["name"] == "struct")));
+
+def CheckArgSanity(arg):
+  print arg
+  if arg.has_key("array") and arg["array"] == 1:
+    return False
+
+  if arg.has_key("pointer") and arg["pointer"] > 1 :
+    return False
+
+  # check sanity of function pointer
+  if (arg.has_key("function_pointer") and \
+      isinstance(arg["function_pointer"], dict) and len(arg["function_pointer"]) > 0) :
+    if not GetV8Type(arg["function_pointer"]["rtnType"]):
+      return False
+    for argT in arg["function_pointer"]["paraTypes"]:
+      argTDict = {"type": argT}
+      if not CheckArgSanity(argTDict):
+        return False
+    return True
+
+  # check sanity of struct
+  argType = arg["type"]
+  argBasicType = GetBasicType(arg)
+
+  if (IsStructArg(argBasicType)):
+    classes = globalVar.cppHeader.classes
+    props = classes[argBasicType]["properties"]["public"]
+    for idxs, prop in enumerate(props):
+      if not CheckArgSanity(prop):
+        return False
+    return True
+
+  if not GetV8Type(argType):
+    return False
+  return True
+
 def CheckSanity(func):
-  #if func.has_key("override") and func["override"]:
-  #  return True
-  
   if func["pure_virtual"]:
     printDbg("pure virtual function is not allowed")
     return False
-  
+
   if re.match(r"operator.*", func["name"]):
     printDbg("Func %s is not converted" %(func["name"]))
     return False
 
+  # Check return type
   if not GetV8Type(func["rtnType"]):
     printDbg("Func %s return type: %s can't transfer to V8" %(func["name"], func["rtnType"]))
     return False
 
+  # Check parameters
   for arg in func["parameters"]:
-    if arg["array"] == 1:
-      printDbg("Func %s arg type: %s[] can't transfer to V8" %(func["name"], arg["type"]))
-      return False
-
-    if not GetV8Type(arg["type"]):
+    if not CheckArgSanity(arg):
       printDbg("Func %s arg type: %s can't transfer to V8" %(func["name"], arg["type"]))
       return False
-
-  if not GetV8Type(func["rtnType"]):
-    printDbg("Func %s return type: %s can't transfer to V8" %(func["name"], func["rtnType"]))
-    return False
-
   return True
 
 def IsEFloat(s):
@@ -198,3 +246,76 @@ def AddIndent(s, num):
     lines[idx] = indent + line
   s = "\n".join(lines)
   return s
+
+def ParseFuncPointTypedef(type_t):
+  stack = type_t.split("(", 1);
+  if stack[0] != type_t:
+    retType = stack[0].strip()
+    argTypes = stack[1].split(")", 1)
+    if argTypes[0] == stack[1][0:-1]:
+      argTypes = argTypes[0].split(",")
+      for i in range(len(argTypes)):
+        argTypes[i] = argTypes[i].strip()
+      type_t = { \
+        "rtnType" : retType, \
+        "paraTypes": argTypes \
+      }
+  return type_t
+
+def ParseTypedefs(typedefs):
+  for key in typedefs.keys():
+    value = re.sub(r" +", " ", typedefs[key])
+    funcPointerType = ParseFuncPointTypedef(value)
+    if funcPointerType == value:
+      valueFP = {
+        "function_pointer" : 0, \
+        "type" : funcPointerType, \
+      }
+    else:
+      valueFP = {
+        "function_pointer" : 1, \
+        "type" : funcPointerType, \
+      }
+    typedefs[key] = valueFP
+
+def ParseFuncPointerParams(params, typedefs):
+  for idx, arg in enumerate(params):
+    argType = arg["type"]
+    lparenCnt = argType.count("(")
+    rparenCnt = argType.count(")")
+
+    if arg["name"] == "" and lparenCnt >= 2 and lparenCnt == rparenCnt:
+      lstack = argType.split("(");
+      starIndex = lstack[1].find("*")
+      if starIndex != -1:
+        # get arg name of function pointer
+        rparenIndex = lstack[1].find(")")
+        params[idx]["name"] = lstack[1][starIndex+1:rparenIndex]
+
+        # get arg type of function pointer
+        type_t = lstack[0] + "(" + lstack[2]
+        funcPointerType = ParseFuncPointTypedef(type_t)
+
+        if (funcPointerType != type_t):
+          params[idx]["function_pointer"] = funcPointerType
+        continue
+
+    # expand typedef
+    if typedefs.has_key(argType):
+      value = typedefs[argType]
+      if value["function_pointer"] == 1:
+        params[idx]["function_pointer"] = value["type"]
+      else:
+        params[idx]["type"] = value["type"]
+        params[idx]["function_pointer"] = {}
+      continue
+
+    params[idx]["function_pointer"] = {}
+
+def ParseFuncPoint(cppHeader):
+  for c in cppHeader.classes:
+    for idx in range(len(cppHeader.classes[c]["methods"]["public"])):
+      ParseFuncPointerParams(cppHeader.classes[c]["methods"]["public"][idx]["parameters"], cppHeader.typedefs)
+
+  for idx in range(len(cppHeader.functions)):
+    ParseFuncPointerParams(cppHeader.functions[idx]["parameters"], cppHeader.typedefs)

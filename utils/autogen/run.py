@@ -2,17 +2,17 @@
 import sys
 import os
 import CppHeaderParser
+import globalVar
 
 from config      import *
 from genJsApi    import *
-#from genJsApiMap import *
+from genJsApiMap import *
 from genC        import *
 
 def ParseHeader(name):
   try:
     printDbg("parsing " + name)
-    cppHeader = CppHeaderParser.CppHeader(name)    
-    return cppHeader
+    globalVar.cppHeader = CppHeaderParser.CppHeader(name)
 
   except CppHeaderParser.CppParseError,  e:
     printDbg(e)
@@ -33,19 +33,24 @@ def HandleHeader(root, f):
   # init debug output
   SetPrintModule(f)
 
-  cppHeader = ParseHeader(root + "/" + f);  
+  ParseHeader(root + "/" + f);
+
+  ParseTypedefs(globalVar.cppHeader.typedefs)
+  ParseFuncPoint(globalVar.cppHeader)
+
+  GenJsApiMap(split[0], globalVar.cppHeader)
 
   #to handle the override functions
-  for c in cppHeader.classes:
-    FormalizeFunc(cppHeader.classes[c]["methods"]["public"])
-    GroupFunc(cppHeader.classes[c]["methods"]["public"])    
+  for c in globalVar.cppHeader.classes:
+    FormalizeFunc(globalVar.cppHeader.classes[c]["methods"]["public"])
+    GroupFunc(globalVar.cppHeader.classes[c]["methods"]["public"])
 
-  FormalizeFunc(cppHeader.functions)
-  GroupFunc(cppHeader.functions)
+  FormalizeFunc(globalVar.cppHeader.functions)
+  GroupFunc(globalVar.cppHeader.functions)
 
   #GenJsApiMap(split[0], cppHeader)
-  GenJsApi(split[0], cppHeader)
-  GenC(split[0], cppHeader)
+  GenJsApi(split[0], globalVar.cppHeader)
+  GenC(split[0], globalVar.cppHeader)
   
   UnsetPrintModule()
 
@@ -64,5 +69,6 @@ if __name__ == "__main__":
   GenPostFuncJsApi();
   GenPostFuncJsApiMap();
   GenPostGlobalInit()
+  GenCallback()
   GenGyp()
   DumpSummary()
