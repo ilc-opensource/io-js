@@ -102,7 +102,7 @@ def GenArgCheck(func) :
 
     if (len(arg["function_pointer"]) > 0) :
       typeCheck = "IsFunction"
-    elif (arg["pointer"] == 1) and (argBasicType != "char"):
+    elif (arg["pointer"] == 1) and (GetIdenticalType(arg["type"]) != "char*"):
       typeCheck = "IsObject"
     else:
       typeCheck = GetV8TypeCheck(arg["type"]);
@@ -235,8 +235,8 @@ def GenSimpleArgTran(arg, argCName, argV8Name):
     if argUniqType == "char*":
       s += \
 '''v8::String::AsciiValue %sStr(%s->ToString());
-char *%s = (char *)*%sStr;
-'''% (argCName, argV8Name, argCName, argCName)
+%s %s = (%s)*%sStr;
+'''% (argCName, argV8Name, arg["type"], argCName, arg["type"], argCName)
     else:
       s += \
 '''%s %s = (%s)%s;
@@ -413,9 +413,7 @@ return scope.Close(Undefined());
     s += \
 '''
 %s %s = %s%s;
-
 %s
-
 return scope.Close(%s);''' \
     % (sRetType, GetRetName(sRetType), objStr, GenCall(func),\
        GenArgsReturn(func), GetV8Value(GetRetName(sRetType), sRetType))
