@@ -110,7 +110,8 @@ def GenJsApiMap(module, cppHeader):
   #generate map of class
   t = ''
   for c in cppHeader.classes:
-    t += GenClassMap(module, c, cppHeader.classes[c])
+    if cppHeader.classes[c]["declaration_method"] == "class":
+      t += GenClassMap(module, c, cppHeader.classes[c])
 
   s += '''
   "classes" : {

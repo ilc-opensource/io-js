@@ -188,8 +188,9 @@ def GenJsApi(module, cppHeader):
 ''' % module 
 
   for c in cppHeader.classes:
-    clientStr += GenClassJsApi(module, cppHeader.classes[c])
-    servStr += GenClassJsApiMap(module, cppHeader.classes[c])
+    if cppHeader.classes[c]["declaration_method"] == "class":
+      clientStr += GenClassJsApi(module, cppHeader.classes[c])
+      servStr += GenClassJsApiMap(module, cppHeader.classes[c])
 
   clientStr += GenJsConst(cppHeader.defines)
 
