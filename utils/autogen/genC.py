@@ -102,7 +102,8 @@ def GenArgCheck(func) :
 
     if (len(arg["function_pointer"]) > 0) :
       typeCheck = "IsFunction"
-    elif (arg["pointer"] == 1) and (GetIdenticalType(arg["type"]) != "char*"):
+    elif ((arg["pointer"] == 1) and (GetIdenticalType(arg["type"]) != "char*")) or \
+        (IsStructArg(argBasicType)):
       typeCheck = "IsObject"
     else:
       typeCheck = GetV8TypeCheck(arg["type"]);
@@ -136,20 +137,22 @@ def GenFuncPointArgDef(arg, idx):
 def GenArgReturn(arg, argCName, argV8Name):
   s = ""
 
-  argType = GetBasicType(arg)
+  argType = arg["type"]
+  argBasicType = GetBasicType(arg)
   classes = globalVar.cppHeader.classes
 
-  if argType == arg["type"]:
+  if argType == argBasicType:
     join = "."
   else:
     join = "->"
 
-  if (IsStructArg(argType)):
-    props = classes[argType]["properties"]["public"]
+  if (IsStructArg(argBasicType)):
+    props = classes[argBasicType]["properties"]["public"]
     for idxs, prop in enumerate(props):
       fldName = prop["name"]
-      fldType = GetBasicType(prop)
-      if (IsStructArg(fldType)):
+      fldType = prop["type"]
+      fldBasicType = GetBasicType(prop)
+      if (IsStructArg(fldBasicType)):
         s += \
 '''%s%dV8 = %s->ToObject()->Get(String::New("%s"));
 '''% (argCName, idxs, argV8Name, fldName)
@@ -157,7 +160,7 @@ def GenArgReturn(arg, argCName, argV8Name):
       else:
         s += \
 '''%s->ToObject()->Set(String::New("%s"), %s);
-'''% (argV8Name, fldName, GetV8Value(argCName + join + fldName,fldType))
+'''% (argV8Name, fldName, GetV8Value(argCName + join + fldName, fldType))
   return s
 
 def GenArgsReturn(func):
