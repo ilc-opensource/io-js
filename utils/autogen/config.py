@@ -4,6 +4,7 @@ INPUT_DECL_PATHS  = [
 #  "../../c_decl/"
 #  "../../test_struct/"
 #  "../../test_fp/"
+#  "../../test_pointer/"
   "../../../libio/export"
 ]
 
