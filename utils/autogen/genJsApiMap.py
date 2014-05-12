@@ -39,7 +39,7 @@ def GenFuncMap(module, func):
   else:
     overrideStr = "false"
     argStr = GenArgsMap(func["parameters"])
-    retStr = GenRetMap(func["rtnType"])
+    retStr = GenRetMap(func["rtnType"]["type"])
 
   return '''
 "%s": {

@@ -46,7 +46,7 @@ C2V8 = { \
   "unsigned int": ["Uint32", "ToUint32", "Uint32Value", "unsigned int", "IsUint32" ], \
   "float": ["Number", "ToNumber", "NumberValue", "float", "IsNumber"], \
   "bool" : ["Boolean", "ToBoolean", "BooleanValue", "bool", "IsBoolean"], \
-  "char*": ["v8::String", "ToString", "", "char*", "IsString"] \
+#  "char*": ["v8::String", "ToString", "", "char*", "IsString"] \
 }
 
 #link other types
@@ -56,14 +56,17 @@ C2V8["long"] = C2V8["int"]
 C2V8["boolean"] = C2V8["bool"]
 
 C2V8["size_t"] = C2V8["unsigned int"]
-C2V8["uint8_t *"] = C2V8["char*"]
+#C2V8["uint8_t *"] = C2V8["char*"]
 
-def GetIdenticalType(t):
-  f = t
+def GetNoQualifierType(t):
   t = t.replace("register ", "")
   t = t.replace("const ", "")
   t = t.replace("extern ", "")
   t = t.replace("auto ", "")
+  return t
+
+def GetIdenticalType(t):
+  t = GetNoQualifierType(t)
   t = t.replace("inline ", "")
 
   if t.find('''*''') == -1 and t.find('''&''') == -1:
@@ -91,14 +94,10 @@ def GetV8Type(t):
 
 def GetConvToCFunc(t):
   t = GetIdenticalType(t);
-  if (t == 'char*'):
-    raise "Please Use other way to transform char* to String"
   return C2V8[t][2]
 
 def GetCValue(value, t):
   t = GetIdenticalType(t);
-  if (t == 'char*'):
-    raise "Please Use other way to transform char* to String"
   if (value):
     s = "%s->%s()" % (value, C2V8[t][2])
   return s
@@ -125,7 +124,7 @@ def IsV8FuncGen(func):
 
 def GetBasicType(arg):
   argType = arg["type"]
-  if arg.has_key("pointer") and arg["pointer"] == 1:
+  if arg.has_key("pointer") and arg["pointer"] == 1 and argType.find("*") != -1:
     starIndex = argType.index("*")
     argBasicType = argType[:starIndex].strip()
   else:
@@ -139,40 +138,59 @@ def IsStructArg(argType):
            (classes[argType]["declaration_method"] == "typedef") and \
             (classes[argType]["name"] == "struct")));
 
-def CheckArgSanity(arg):
-  print arg
+# check sanity of struct
+def CheckCommonArgSanity(argType):
+  if not GetV8Type(argType):
+    return False
+  return True
+
+# check sanity of Array pointer
+def CheckArrayArgSanity(arg):
+  argBasicType = GetBasicType(arg)
+  return CheckCommonArgSanity(argBasicType)
+
+# check sanity of struct
+def CheckStructArgSanity(arg):
+  argBasicType = GetBasicType(arg)
+  classes = globalVar.cppHeader.classes
+  props = classes[argBasicType]["properties"]["public"]
+  for idxs, prop in enumerate(props):
+    if not CheckArgSanity(prop, False):
+      return False
+
+  return True
+
+# check sanity of function pointer
+def CheckFPArgSanity(arg):
+  if not CheckCommonArgSanity(arg["function_pointer"]["rtnType"]["type"]):
+    return False
+  for argT in arg["function_pointer"]["paraTypes"]:
+    if not CheckCommonArgSanity(argT["type"]):  # only transform simple func pointer
+      return False
+  return True
+
+def CheckArgSanity(arg, convertFP):
   if arg.has_key("array") and arg["array"] == 1:
     return False
 
   if arg.has_key("pointer") and arg["pointer"] > 1 :
     return False
 
-  # check sanity of function pointer
-  if (arg.has_key("function_pointer") and \
-      isinstance(arg["function_pointer"], dict) and len(arg["function_pointer"]) > 0) :
-    if not GetV8Type(arg["function_pointer"]["rtnType"]):
-      return False
-    for argT in arg["function_pointer"]["paraTypes"]:
-      argTDict = {"type": argT}
-      if not CheckArgSanity(argTDict):
-        return False
-    return True
-
-  # check sanity of struct
-  argType = arg["type"]
   argBasicType = GetBasicType(arg)
 
-  if (IsStructArg(argBasicType)):
-    classes = globalVar.cppHeader.classes
-    props = classes[argBasicType]["properties"]["public"]
-    for idxs, prop in enumerate(props):
-      if not CheckArgSanity(prop):
-        return False
-    return True
-
-  if not GetV8Type(argType):
-    return False
-  return True
+  if (arg.has_key("function_pointer") and \
+      isinstance(arg["function_pointer"], dict) and \
+      len(arg["function_pointer"]) > 0) :
+    if convertFP:
+      return CheckFPArgSanity(arg)
+    else:
+      return False
+  elif (IsStructArg(argBasicType)):
+    return CheckStructArgSanity(arg)
+  elif (arg["pointer"] == 1):
+    return CheckArrayArgSanity(arg)
+  else:
+    return CheckCommonArgSanity(arg["type"])
 
 def CheckSanity(func):
   if func["pure_virtual"]:
@@ -184,13 +202,15 @@ def CheckSanity(func):
     return False
 
   # Check return type
-  if not GetV8Type(func["rtnType"]):
-    printDbg("Func %s return type: %s can't transfer to V8" %(func["name"], func["rtnType"]))
+#if not GetV8Type(func["rtnType"]):
+  if not CheckArgSanity(func["rtnType"], False):
+    printDbg("Func %s return type: %s can't transfer to V8" \
+             %(func["name"], func["rtnType"]["type"]))
     return False
 
   # Check parameters
   for arg in func["parameters"]:
-    if not CheckArgSanity(arg):
+    if not CheckArgSanity(arg, True):
       printDbg("Func %s arg type: %s can't transfer to V8" %(func["name"], arg["type"]))
       return False
   return True
@@ -255,9 +275,18 @@ def ParseFuncPointTypedef(type_t):
     if argTypes[0] == stack[1][0:-1]:
       argTypes = argTypes[0].split(",")
       for i in range(len(argTypes)):
-        argTypes[i] = argTypes[i].strip()
+        argType = argTypes[i].strip()
+        argTypes[i] = {
+          "type": argType,
+          "pointer" : argType.count("*")
+        }
       type_t = { \
-        "rtnType" : retType, \
+        "rtnType" : {
+           "type" : retType, \
+           "pointer": retType.count("*"), \
+#TODO: parse function pointer
+           "function_pointer": {}
+        },
         "paraTypes": argTypes \
       }
   return type_t
@@ -312,10 +341,23 @@ def ParseFuncPointerParams(params, typedefs):
 
     params[idx]["function_pointer"] = {}
 
+def ParseFuncRtnType(func):
+  rtnType = func["rtnType"]
+  func["rtnType"] = {
+    "type" : rtnType, \
+    "pointer": rtnType.count("*"), \
+#TODO: parse function pointer
+    "function_pointer": {} \
+  }
+
 def ParseFuncPoint(cppHeader):
   for c in cppHeader.classes:
     for idx in range(len(cppHeader.classes[c]["methods"]["public"])):
       ParseFuncPointerParams(cppHeader.classes[c]["methods"]["public"][idx]["parameters"], cppHeader.typedefs)
+      ParseFuncRtnType(cppHeader.classes[c]["methods"]["public"][idx])
 
   for idx in range(len(cppHeader.functions)):
     ParseFuncPointerParams(cppHeader.functions[idx]["parameters"], cppHeader.typedefs)
+    ParseFuncRtnType(cppHeader.functions[idx])
+
+
