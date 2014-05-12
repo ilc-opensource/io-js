@@ -17,7 +17,9 @@ io.config({
   url: 'http://zliu9-desk5.bj.intel.com:2000'
 });
 
-io.initWithTty("/dev/tty1", "/dev/tty1", "/dev/tty1");
+io.initWithTty(new Buffer("/dev/tty1"),
+               new Buffer("/dev/tty1"),
+               new Buffer("/dev/tty1"));
 
 var led = new Led({
   io: io,

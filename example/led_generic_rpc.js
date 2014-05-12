@@ -8,7 +8,9 @@ io.config({
   'port': 2000
 });
 
-io.initWithTty("/dev/tty1", "/dev/tty1", "/dev/tty1");
+io.initWithTty(new Buffer("/dev/tty1"),
+               new Buffer("/dev/tty1"),
+               new Buffer("/dev/tty1"));
 
 var led = new GA.Led({
   io: io,

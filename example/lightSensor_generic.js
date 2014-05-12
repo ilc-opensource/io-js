@@ -2,7 +2,9 @@ var GA = require('../lib/');
 
 var io = GA.IO;
 
-io.initWithTty("/dev/tty1", "/dev/tty1", "/dev/tty1");
+io.initWithTty(new Buffer("/dev/tty1"),
+               new Buffer("/dev/tty1"),
+               new Buffer("/dev/tty1"));
 
 var sensor = new GA.Sensor({
   io : io,
