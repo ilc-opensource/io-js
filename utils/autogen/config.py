@@ -5,7 +5,8 @@ INPUT_DECL_PATHS  = [
 #  "../../test_struct/"
 #  "../../test_fp/"
 #  "../../test_pointer/"
-  "../../../libio/export"
+#  "../../../libio/export"
+   "/home/rfen/workspace/pia-sdk-0225/iolib/arduino/arduiPIA.h"
 ]
 
 TARGET               = 'galileo'
