@@ -1307,7 +1307,10 @@ def BuildGyp():
 
   inc = ""
   for idx in INPUT_DECL_PATHS:
-    inc += "'" + idx + "',\n"
+    if os.path.isfile(idx):
+      inc += "'" + os.path.dirname(idx) + "',\n"
+    else:
+      inc += "'" + idx + "',\n"
   inc = AddIndent(inc, 6)
 
   return \

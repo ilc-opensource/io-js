@@ -140,6 +140,7 @@ def IsStructArg(argType):
 
 # check sanity of struct
 def CheckCommonArgSanity(argType):
+  argType = GetIdenticalType(argType)
   if not GetV8Type(argType):
     return False
   return True

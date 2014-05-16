@@ -19,6 +19,9 @@ def ParseHeader(name):
     sys.exit(1)
 
 def HandleHeader(root, f):
+  if f.find('.') == -1:
+    return
+
   split = f.rsplit('.', 1)
 
   #only .h file is wanted
@@ -61,10 +64,15 @@ if __name__ == "__main__":
   GenPreFuncJsApiMap()
 
   for p in INPUT_DECL_PATHS:
-    printDbg("searching " + p)
-    for root, dirs, files in os.walk(p):
-      for f in files:
-        HandleHeader(root, f)
+    if os.path.isfile(p):
+      root = os.path.dirname(p)
+      f = os.path.basename(p)
+      HandleHeader(root, f)
+    else:
+      printDbg("searching " + p)
+      for root, dirs, files in os.walk(p):
+        for f in files:
+          HandleHeader(root, f)
 
   GenPostFuncJsApi();
   GenPostFuncJsApiMap();
