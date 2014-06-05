@@ -40,6 +40,7 @@ def HandleHeader(root, f):
 
   ParseTypedefs(globalVar.cppHeader.typedefs)
   ParseFuncPoint(globalVar.cppHeader)
+  FixEnumPropType(globalVar.cppHeader)
 
   GenJsApiMap(split[0], globalVar.cppHeader)
 

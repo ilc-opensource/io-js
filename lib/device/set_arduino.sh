@@ -1,5 +1,0 @@
-ARDUINO_PATH="~/work/arduino-1.5.3"
-SYSROOT="$ARDUINO_PATH/hardware/tools/sysroots/i586-poky-linux-uclibc"
-export CC="$ARDUINO_PATH/hardware/tools/sysroots/x86_64-pokysdk-linux/usr/bin/i586-poky-linux-uclibc/i586-poky-linux-uclibc-gcc --sysroot=$SYSROOT -m32 -march=i586 -w -ffunction-sections -f data-sections -MMD -DARDUINO=153"
-export CXX="$ARDUINO_PATH/hardware/tools/sysroots/x86_64-pokysdk-linux/usr/bin/i586-poky-linux-uclibc/i586-poky-linux-uclibc-g++ --sysroot=$SYSROOT -m32 -march=i586 -w -fno-exceptions -ffunction-sections -fdata-sections -DARDUINO=153"
-export LINK="$ARDUINO_PATH/hardware/tools/sysroots/x86_64-pokysdk-linux/usr/bin/i586-poky-linux-uclibc/i586-poky-linux-uclibc-g++ --sysroot=$SYSROOT"

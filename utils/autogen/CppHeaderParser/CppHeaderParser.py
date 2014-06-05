@@ -1845,7 +1845,7 @@ class _CppHeader( Resolver ):
                 if self.curAccessSpecifier == 'public': klass._public_typedefs[ name ] = typedef['type']
                 Resolver.SubTypedefs[ name ] = self.curClass
             else: assert 0
-        elif self.curStruct or self.curClass:
+        else:
             if len(self.nameStack) == 1:
                 #See if we can de anonymize the type
                 filteredParseHistory = [h for h in parseHistory if h["braceDepth"] == self.braceDepth]
@@ -1882,6 +1882,10 @@ class _CppHeader( Resolver ):
                 klass = self.classes[self.curClass]
                 klass["properties"][self.curAccessSpecifier].append(newVar)
                 newVar['property_of_class'] = klass['name']
+            else:
+              if newVar["name"] != "":
+                self.global_vars.append(newVar)
+              
             parseHistory.append({"braceDepth": self.braceDepth, "item_type": "variable", "item": newVar})
 
         self.stack = []        # CLEAR STACK
@@ -2008,6 +2012,7 @@ class CppHeader( _CppHeader ):
 
         self.enums = []
         self.global_enums = {}
+        self.global_vars = []
         self.nameStack = []
         self.nameSpaces = []
         self.curAccessSpecifier = 'private'    # private is default
@@ -2319,6 +2324,10 @@ class CppHeader( _CppHeader ):
             debug_print( "trace" )
             self.evaluate_class_stack()
 
+        elif is_enum_namestack(self.nameStack) and not is_method_namestack(self.stack):
+            debug_print( "trace" )
+            self.evaluate_enum_stack()
+
         elif not self.curClass and 'typedef' in self.nameStack:
             trace_print('STACK', self.stack)
             self.evaluate_typedef()
@@ -2334,10 +2343,6 @@ class CppHeader( _CppHeader ):
         elif len(self.nameStack) == 2 and self.nameStack[0] == "friend":#friend class declaration
             pass
         elif len(self.nameStack) >= 2 and self.nameStack[0] == 'using' and self.nameStack[1] == 'namespace': pass    # TODO
-
-        elif is_enum_namestack(self.nameStack):
-            debug_print( "trace" )
-            self.evaluate_enum_stack()
 
         elif self._method_body and (self.braceDepth + 1) > self._method_body: trace_print( 'INSIDE METHOD DEF' )
         elif is_method_namestack(self.stack) and not self.curStruct and '(' in self.nameStack:
@@ -2425,8 +2430,15 @@ class CppHeader( _CppHeader ):
             rtn += "// functions\n"
             for f in self.functions:
                 rtn += "%s\n"%f
+        if self.typedefs:
+            rtn += "// typedefs\n"
+            rtn += "%s\n" %self.typedefs
         if self.enums:
             rtn += "// enums\n"
             for f in self.enums:
                 rtn += "%s\n"%f
+        if self.global_vars:
+            rtn += "// global vars\n"
+            for v in self.global_vars:
+                rtn += "%s\n"%v
         return rtn

@@ -2,6 +2,7 @@ import re
 from config import *
 from termcolor import colored
 import globalVar
+import os
 
 CURR_MODULE = "-"
 
@@ -60,6 +61,7 @@ C2V8["size_t"] = C2V8["unsigned int"]
 
 def GetNoQualifierType(t):
   t = t.replace("register ", "")
+  t = t.replace("static ", "")
   t = t.replace("const ", "")
   t = t.replace("extern ", "")
   t = t.replace("auto ", "")
@@ -133,10 +135,18 @@ def GetBasicType(arg):
 
 def IsStructArg(argType):
   classes = globalVar.cppHeader.classes
+  argType = GetIdenticalType(argType)
+  argType = re.sub(r'^struct ', "", argType);
   return (classes.has_key(argType) and \
           ((classes[argType]["declaration_method"] == "struct") or \
            (classes[argType]["declaration_method"] == "typedef") and \
             (classes[argType]["name"] == "struct")));
+
+def IsEnumArg(argType):
+  argType = GetIdenticalType(argType)
+  argType = re.sub(r'^enum ', "", argType).strip()
+  enums = globalVar.cppHeader.global_enums
+  return enums.has_key(argType);
 
 # check sanity of struct
 def CheckCommonArgSanity(argType):
@@ -147,14 +157,21 @@ def CheckCommonArgSanity(argType):
 
 # check sanity of Array pointer
 def CheckArrayArgSanity(arg):
-  argBasicType = GetBasicType(arg)
-  return CheckCommonArgSanity(argBasicType)
+  argBasicType = GetNoQualifierType(GetBasicType(arg))
+  if argBasicType == "void":
+    return True
+  else:
+    return CheckCommonArgSanity(argBasicType)
+
+def CheckEnumArgSanity(arg):
+  return True
 
 # check sanity of struct
 def CheckStructArgSanity(arg):
-  argBasicType = GetBasicType(arg)
+  argBasicType = GetNoQualifierType(GetBasicType(arg))
+  argStructName = re.sub(r'^struct ', '', argBasicType)
   classes = globalVar.cppHeader.classes
-  props = classes[argBasicType]["properties"]["public"]
+  props = classes[argStructName]["properties"]["public"]
   for idxs, prop in enumerate(props):
     if not CheckArgSanity(prop, False):
       return False
@@ -171,13 +188,18 @@ def CheckFPArgSanity(arg):
   return True
 
 def CheckArgSanity(arg, convertFP):
-  if arg.has_key("array") and arg["array"] == 1:
+  argIsArray = 0
+  argIsPointer = 0
+  if arg.has_key("array"):
+    argIsArray = arg["array"]
+
+  if arg.has_key("pointer"):
+    argIsPointer = arg["pointer"]
+  
+  if (argIsArray + argIsPointer > 1): # only handle one level pointer
     return False
 
-  if arg.has_key("pointer") and arg["pointer"] > 1 :
-    return False
-
-  argBasicType = GetBasicType(arg)
+  argBasicType = GetNoQualifierType(GetBasicType(arg))
 
   if (arg.has_key("function_pointer") and \
       isinstance(arg["function_pointer"], dict) and \
@@ -188,7 +210,9 @@ def CheckArgSanity(arg, convertFP):
       return False
   elif (IsStructArg(argBasicType)):
     return CheckStructArgSanity(arg)
-  elif (arg["pointer"] == 1):
+  elif (IsEnumArg(argBasicType)):
+    return CheckEnumArgSanity(arg)
+  elif (argIsArray or argIsPointer):
     return CheckArrayArgSanity(arg)
   else:
     return CheckCommonArgSanity(arg["type"])
@@ -295,6 +319,7 @@ def ParseFuncPointTypedef(type_t):
 def ParseTypedefs(typedefs):
   for key in typedefs.keys():
     value = re.sub(r" +", " ", typedefs[key])
+
     funcPointerType = ParseFuncPointTypedef(value)
     if funcPointerType == value:
       valueFP = {
@@ -350,6 +375,11 @@ def ParseFuncRtnType(func):
 #TODO: parse function pointer
     "function_pointer": {} \
   }
+  if (rtnType.count("[") >= 1) and \
+     (rtnType.count("[") == rtnType.count("]")):
+    func["rtnType"]["array"] = 1
+  else:
+    func["rtnType"]["array"] = 0
 
 def ParseFuncPoint(cppHeader):
   for c in cppHeader.classes:
@@ -361,4 +391,26 @@ def ParseFuncPoint(cppHeader):
     ParseFuncPointerParams(cppHeader.functions[idx]["parameters"], cppHeader.typedefs)
     ParseFuncRtnType(cppHeader.functions[idx])
 
+def FixEnumPropType(cppHeader):
+  for c in cppHeader.classes:
+    enums = cppHeader.classes[c]["enums"]["public"]
+    props = cppHeader.classes[c]["properties"]["public"]
+    for idx, prop in enumerate(props):
+      t = prop["type"]
+      for enum in enums:
+        if enum["name"] == t:
+          cppHeader.classes[c]["properties"]["public"][idx]["type"] = "enum " + t
+
+def mkdir(path):
+    path=path.strip()
+    path=path.rstrip("\\")
+
+    isExists=os.path.exists(path)
+
+    if not isExists:
+        printWarn('Created ' + path)
+        os.makedirs(path)
+        return True
+    else:
+        return False
 

@@ -1,0 +1,86 @@
+{
+  
+    "name" : "AnalogIO",
+  
+    "classes" : {
+      
+    },
+  
+    "constants" : {
+      
+    },
+  
+    "functions" : {
+      
+      "pwmInit": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "arg0",
+            "type": "True"
+          }
+        ],
+        "return": ["True"]
+      },
+      
+      "analogRead": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "arg0",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["Uint32"]
+      },
+      
+      "analogReadResolution": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "res",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["True"]
+      },
+      
+      "analogReference": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "mode",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["True"]
+      },
+      
+      "analogWrite": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "arg0",
+            "type": "Uint32"
+          },
+          {
+            "name": "arg1",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["True"]
+      },
+      
+      "pin2pwmhandle_enable": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "pin",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["Int32"]
+      }
+    }
+  
+}

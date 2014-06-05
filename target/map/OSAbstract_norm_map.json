@@ -1,0 +1,35 @@
+{
+  
+    "name" : "OSAbstract_norm",
+  
+    "classes" : {
+      
+    },
+  
+    "constants" : {
+      
+    },
+  
+    "functions" : {
+      
+      "initWithTty": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "tty0",
+            "type": "False"
+          },
+          {
+            "name": "tty1",
+            "type": "False"
+          },
+          {
+            "name": "tty2",
+            "type": "False"
+          }
+        ],
+        "return": ["True"]
+      }
+    }
+  
+}

@@ -1,0 +1,75 @@
+{
+  
+    "name" : "fast_gpio_sc",
+  
+    "classes" : {
+      
+    },
+  
+    "constants" : {
+      
+    },
+  
+    "functions" : {
+      
+      "fastGpioSCInit": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "arg0",
+            "type": "True"
+          }
+        ],
+        "return": ["Int32"]
+      },
+      
+      "fastGpioSCFini": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "arg0",
+            "type": "True"
+          }
+        ],
+        "return": ["True"]
+      },
+      
+      "fastGpioDigitalWrite": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "gpio",
+            "type": "Uint32"
+          },
+          {
+            "name": "val",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["True"]
+      },
+      
+      "fastGpioDigitalWriteDestructive": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "gpio",
+            "type": "Uint32"
+          }
+        ],
+        "return": ["True"]
+      },
+      
+      "fastGpioDigitalLatch": {
+        "override" : false,
+        "parameters": [
+          {
+            "name": "arg0",
+            "type": "True"
+          }
+        ],
+        "return": ["Uint32"]
+      }
+    }
+  
+}

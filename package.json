@@ -1,0 +1,26 @@
+{
+  "author" : "Intel",
+
+  "name"   : "io-js",
+
+  "description" : "JS binding for IO library",
+
+  "version" : "0.5.0",
+
+  "main"   : "target/index.js",
+
+  "dependencies" : {
+    "bindings": "*"
+  },
+
+  "bin" : {
+    "iotio-server" : "./bin/iotio-server.sh"
+  },
+
+  "scripts" : {
+    "preinstall" : "(make configure || true)",
+    "install" : "(make rebuild || true)"
+  }
+}
+
+
