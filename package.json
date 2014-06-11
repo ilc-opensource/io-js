@@ -9,6 +9,10 @@
 
   "main"   : "target/index.js",
 
+  "config": {
+    "unsafe-perm":true
+  },
+
   "dependencies" : {
     "bindings": "*"
   },
