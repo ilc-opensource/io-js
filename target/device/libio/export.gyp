@@ -16,6 +16,7 @@
         '<(core_dir)/AnalogIO.h',
         '<(core_dir)/fast_gpio_sc.h',
         '<(core_dir)/sysfs.h',
+        '<(core_dir)/UtilTime.h',
 
         '<(variant_dir)/pins_arduino.h',
 
