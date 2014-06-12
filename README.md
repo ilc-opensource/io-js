@@ -10,10 +10,62 @@ A unified IO Javascript library for IOT device(Galileo/Edison), companion device
 * Offload execution
 * Autogen tools for customized IO functions
 
+## PreInstall
+* This library can run correctly both on Intel dev kit https://software.intel.com/en-us/iotdevkit which contains host a machine running DevKit Live USB image and target Intel Galileo platform. This IO library can run on both of them. Below is a quick guide of how to enable nodejs on host and target. 
+
+### Install yocoto on galileo
+
+* [Download SD card image (200M)](http://iotdk.intel.com/images/iot-devkit-201402201605-mmcblkp0.direct.bz2)
+
+* Uncompress image & recover image to micro sd card with `dd` cmd
+```bash
+dd if=/path/to/image  of=/sd/dev/path bs=1M
+```
+* insert SD card to galileo, then power on galileo 
+
+* ssh login
+```bash
+ssh root@ip_address_for_galileo
+```
+
+* check node/node-gyp/npm
+  - If not in $PATH, please find it under root directory, then create  symbol link for it. for example,
+```bash
+ln -s /usr/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js /usr/bin/node-gyp
+```
+
+* Make sure Galileo system is set correctly.
+
+* copy io-js to galileo, then you can jump to `Installation` section. But the installation is very slow on Galileo. You may want to compile the library on host machine with cross compiler
+
+### Install devkit live image on host machine
+
+* Download iot dev kit image (4.2G)
+  - [devkit-live-img-final.binblob.bz2](https://software.intel.com/sites/landingpage/iotdk/devkit-live-img-final.binblob.bz2)
+
+* Although devkit officially suggest to use it as bootable USB key, but we suggest you to boot it in virtual machine.
+
+* Download & Install Virtual box
+  - [Refer to virtual box official website](https://www.virtualbox.org/wiki/Downloads)
+* uncompress image & convert image to virtual box image
+```bash
+vboxmanage convertfromraw --format VMDK devkit-live-img-final.binblob ~/devkit.vmdk
+```
+* Boot up devkit.vmdk in virtual box
+
+* login virtual machine
+
+* check node/node-gyp/npm
+  - If not under $PATH, please find it under root directory, then create  symbol link for it. for example,
+```bash
+  ln -s /opt/iot-devkit/1.5.1/yocto/sysroots/i586-poky-linux/usr/lib/node_modules/npm/node_modules/node-gyp/bin/node-gyp.js /usr/bin/node-gyp
+```
+* copy io-js to devkit, then run it followed `Installation` part. 
+
 ## Installation
 
-npm install
-
+  npm install
+  
 ## Examples
 
 * Native IO operation on IOT device
@@ -101,3 +153,4 @@ make test
 ## Arduino Library
 
 Go to target/device/libio
+
