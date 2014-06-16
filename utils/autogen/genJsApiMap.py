@@ -10,6 +10,9 @@ def GenArgsMap(args):
 '''"parameters": [
 '''
   for idx, arg in enumerate(args):
+    if GetIdenticalType(arg["type"]) == "void" and arg["pointer"] == 0:
+      continue
+
     argName = arg["name"]
     if len(argName) == 0:
       argName = "arg%d"%idx
@@ -19,8 +22,8 @@ def GenArgsMap(args):
     "name": "%s",
     "type": "%s"
   },
-'''%(argName, GetV8Type(arg["type"])) 
-  
+'''%(argName, arg["type"])
+
   s = RemoveLastComma(s)
   s += "\n]"
   return s
@@ -29,7 +32,7 @@ def GenRetMap(ret):
   if ret == "":
     return '"return": []'
   else:
-    return '"return": ["%s"]' % (GetV8Type(ret))
+    return '"return": ["%s"]' % (ret)
 
 def GenFuncMap(module, func):  
   if func.has_key("override") and func["override"]:
@@ -97,7 +100,26 @@ def GenDefineMap(defines):
       continue
     s += '"' + macros[0] + '": ' + macros[1] + ',\n'
 
-  return RemoveLastComma(s)  
+  return RemoveLastComma(s)
+
+def GenEnumsMap(enums):
+  s = ''
+  for idx, enum in enumerate(enums):
+    s += '"' + enum["name"] + ',\n'
+
+  return RemoveLastComma(s)
+
+def GenGlobalVarsMap(globalVars):
+  s = ''
+  for idx, gvar in enumerate(globalVars):
+    s += \
+'''  {
+    "name": "%s",
+    "type": "%s"
+  },
+'''%(gvar["name"], gvar["type"])
+
+  return RemoveLastComma(s)
 
 def GenJsApiMap(module, cppHeader):
 
@@ -127,6 +149,21 @@ def GenJsApiMap(module, cppHeader):
 %s
   },
 ''' % AddIndent(t, 4)  
+  
+  t = GenEnumsMap(cppHeader.enums)
+  s += '''
+  "enums" : {
+%s
+  },
+''' % AddIndent(t, 4)  
+  
+  t = GenGlobalVarsMap(cppHeader.global_vars)
+  s += '''
+  "global variables" : {
+%s
+  },
+''' % AddIndent(t, 4)  
+  
 
   t = ''
   #generate map of functions

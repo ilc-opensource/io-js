@@ -78,6 +78,16 @@ def GenJsConst(defines):
 ''' % (macros[0], macros[1])
   return s
 
+def GenJsEnumConst(enums):
+  s = ''
+  for enum in enums:
+    for v in enum["values"]:
+      s += \
+'''
+  self.%s = %s;
+''' %(v["name"], v["value"])
+  return s
+
 def GenPreFuncJsApi():
   mkdir(OUTPUT_COMP_PATH)
   f = OUTPUT_COMP_PATH + "/" + TARGET +".js"
@@ -150,6 +160,62 @@ module.exports =  methods;
 '''
   fp.write(s)
 
+def GenJsApiGlobalVarSetterAndGetter(global_vars):
+
+  s = ""
+
+  for idx, var in enumerate(global_vars):
+    varName = var["name"].capitalize() + "V8"
+    getFuncName = "get" + varName
+
+    s += \
+'''
+  self.%s = function() {
+    return self.submit.funcReq('%s', arguments);
+  };
+'''%(getFuncName, getFuncName)
+    
+    if var["constant"] == 1:
+      continue
+
+    setFuncName = "set" + varName
+    s += \
+'''
+  self.%s = function() {
+    return self.submit.funcReq('%s', arguments);
+  };
+'''%(setFuncName, setFuncName)
+
+  return s
+
+def GenJsApiMapGlobalVarSetterAndGetter(global_vars):
+
+  s = ""
+
+  for idx, var in enumerate(global_vars):
+    varName = var["name"].capitalize() + "V8"
+
+    getFuncName = 'get' + varName
+    s += \
+'''
+  map['%s'] = function() {
+    self.handle.funcReq(self.io.%s, '%s');
+  };
+'''%(getFuncName, getFuncName, getFuncName)
+
+    if var["constant"] == 1:
+      continue
+
+    setFuncName = 'set' + varName
+    s += \
+'''
+  map['%s'] = function() {
+    self.handle.funcReq(self.io.%s, '%s');
+  };
+'''%(setFuncName, setFuncName, setFuncName)
+
+  return s
+
 def GenFuncJsApi(module, func):
   funcName = func["name"]
   return \
@@ -185,10 +251,14 @@ def GenJsApi(module, cppHeader):
 
   for c in cppHeader.classes:
     if cppHeader.classes[c]["declaration_method"] == "class":
-      clientStr += GenClassJsApi(module, cppHeader.classes[c])
-      servStr += GenClassJsApiMap(module, cppHeader.classes[c])
+      clientStr += GenClassJsApi(c, cppHeader.classes[c])
+      servStr += GenClassJsApiMap(c, cppHeader.classes[c])
 
   clientStr += GenJsConst(cppHeader.defines)
+  clientStr += GenJsEnumConst(cppHeader.enums)
+
+  clientStr += GenJsApiGlobalVarSetterAndGetter(cppHeader.global_vars)
+  servStr += GenJsApiMapGlobalVarSetterAndGetter(cppHeader.global_vars)
 
   #generate map of functions
   for idx, func in enumerate(cppHeader.functions):
