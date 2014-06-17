@@ -65,6 +65,7 @@ vboxmanage convertfromraw --format VMDK devkit-live-img-final.binblob ~/devkit.v
 ## Installation
 
   npm install
+  (if run `io-js` as root, please use "npm install -unsafe-perm" instead)
   
 ## Examples
 
