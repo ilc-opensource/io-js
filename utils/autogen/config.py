@@ -3,6 +3,7 @@ INPUT_DECL_PATHS  = [
 #   "../../../pia-sdk-repo/iolib/arduino/arduiPIA.h"
 ]
 
+VERSION              = '0.0.1'
 TARGET               = 'galileo'
 OUTPUT_COMP_PATH     = '../../target/companion/lib/board/'
 OUTPUT_DEV_PATH      = '../../target/device/board/src'

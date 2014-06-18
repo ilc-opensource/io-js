@@ -237,17 +237,19 @@ def GenFuncJsApiMap(module, func):
 def GenJsApi(module, cppHeader):
   clientStr = \
 '''
+%s
 /****************************************
            %s
 ****************************************/
-''' % module 
+''' % (GetComment(), module)
 
   servStr = \
 '''
+%s
   /****************************************
              %s
   ****************************************/
-''' % module 
+''' % (GetComment(), module)
 
   for c in cppHeader.classes:
     if cppHeader.classes[c]["declaration_method"] == "class":

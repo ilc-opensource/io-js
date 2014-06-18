@@ -178,7 +178,8 @@ def GenJsApiMap(module, cppHeader):
 ''' % AddIndent(t, 4)  
   
   #generate outermost {}
-  rs = "{\n"
+  rs = GetComment()
+  rs += "{\n"
   rs += AddIndent(s, 2)
   rs += "\n}"
 
