@@ -36,35 +36,19 @@
 
       'lib_srcs' : [
         '<(lib_dir)/Servo/Servo.cpp',
-        '<(lib_dir)/Wire/Wire.cpp'
+        '<(lib_dir)/Wire/Wire.cpp',
+        '<(lib_dir)/SPI/SPI.cpp',
       ], 
 
       'lib_inc' : [
         '<(lib_dir)/Servo',
-        '<(lib_dir)/Wire'
+        '<(lib_dir)/Wire',
+        '<(lib_dir)/SPI',
       ],
 
       'extra_srcs' : [
         '<(extra_dir)/OSAbstract_norm.cpp',
         '<(extra_dir)/version.cpp',
-      ],
- 
-      'export_headers' : [
-        '<(core_dir)/Arduino.h',
-        '<(core_dir)/i2c.h',        
-        '<(core_dir)/AnalogIO.h',
-        '<(core_dir)/fast_gpio_sc.h',
-        '<(core_dir)/sysfs.h',
-
-        '<(variant_dir)/pins_arduino.h',
-
-        '<(extra_dir)/OSAbstract_norm.h',
-        '<(extra_dir)/wiring_digital_norm.h',
-        '<(extra_dir)/variant_norm.h',
-        '<(extra_dir)/pin_map_norm.h',
-        '<(extra_dir)/version.h',
-
-        '<(lib_dir)/Servo/Servo.h',
       ],
     },
 

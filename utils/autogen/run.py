@@ -90,8 +90,9 @@ if __name__ == "__main__":
     HandleHeader(f)
 
   GenPostFuncJsApi();
-  GenPostFuncJsApiMap();
+  GenPostFuncJsApiMap()
   GenPostGlobalInit()
   GenCallback()
   GenGyp()
+  GenGlobalClassVarJsExport()
   DumpSummary()

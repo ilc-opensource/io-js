@@ -275,7 +275,7 @@ def CheckSanity(func):
     return False
 
   # Check return type
-  if not CheckArgSanity(func["rtnType"], False, False):
+  if not CheckArgSanity(func["rtnType"], False, True):
     printDbg("Func %s return type: %s can't transfer to V8" \
              %(func["name"], func["rtnType"]["type"]))
     return False

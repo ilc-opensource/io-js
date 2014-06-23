@@ -1,5 +1,4 @@
-
-var IO = require('bindings')('galileo.node');
+var IO = require('./globalClassVarSetterGetter');
 
 var Board = function() {
   this.hello = 'world';

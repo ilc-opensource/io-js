@@ -10,7 +10,8 @@
 
     'lib_inc' : [
       '<(lib_dir)/Servo',
-      '<(lib_dir)/Wire'
+      '<(lib_dir)/Wire',
+      '<(lib_dir)/SPI',
     ],
   },
 
@@ -18,7 +19,7 @@
     '<@(core_dir)',
     '<@(variant_dir)',
     '<@(lib_inc)',
-    '<@(extra_dir)'
+    '<@(extra_dir)',
   ],
 
 
@@ -29,7 +30,7 @@
 
   'cflags_c' : [
   ],
-    
+
   'cflags_cc': [
     '-fno-exceptions'
   ],

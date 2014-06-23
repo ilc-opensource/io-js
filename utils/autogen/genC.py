@@ -57,37 +57,6 @@ def GenSetMemberFunc(funcs):
   s += "}\n"
   return s
 
-def GenSetGlobalVarFunc(global_vars):
-  global thisSummary
-  s = "\nstatic void SetGlobalVarFunc(Handle<Object> obj) {\n"
-  for var in global_vars:
-    if not CheckArgSanity(var, False, False):
-      thisSummary["failGlobalVar"].append(var["name"])
-      continue
-
-    thisSummary["succGlobalVar"].append(var["name"])
-    varName = var["name"].capitalize() + "V8"
-    getFuncName = "get" + varName
-    setFuncName = "set" + varName
-
-    s += \
-'''
-    obj->Set(v8::String::NewSymbol("get%s"),
-           FunctionTemplate::New(Get%s)->GetFunction());
-'''%(varName, varName)
-
-    if var["constant"] == 1:
-      continue
-
-    s += \
-'''
-    obj->Set(v8::String::NewSymbol("set%s"),
-           FunctionTemplate::New(Set%s)->GetFunction());
-'''%(varName, varName)
-
-  s += "}\n"
-  return s
-
 def GenArgList(func, withType):
   s =""
   args = func["parameters"]
@@ -372,9 +341,6 @@ def GenStringReturn(rtn, idx, rtnCName, rtnV8Name):
 ''' %(rtnV8Name, rtnCName)
   return s
 
-def GenClassReturn(rtn, idx, rtnCName, rtnV8Name):
-  raise "GenFuncReturn: Can not handle return type 'class'."
-
 def GenStructReturn(rtn, idx, rtnCName, rtnV8Name):
   s = ""
 
@@ -414,8 +380,6 @@ def GenFuncReturn(rtn, idx, rtnCName, rtnV8Name):
 
   if (IsStructArg(rtnBasicType)):
     s = GenStructReturn(rtn, idx, rtnCName, rtnV8Name)
-  elif (IsClassArg(rtnBasicType)):
-    s = GenClassReturn(rtn, idx, rtnCName, rtnV8Name)
   elif (IsEnumArg(rtnUniqType)):
     s = GenEnumReturn(rtnCName, rtnV8Name)
   elif (rtnUniqType == "char*"):
@@ -801,6 +765,92 @@ static void SetConst(Handle<Object> obj) {
 
   return s
 
+def GetGlobalClassVarCGetterFuncName(var):
+  return "Get%sV8" %(var["name"].capitalize())
+
+def GetGlobalClassVarV8GetterFuncName(var):
+  return "get%sV8E" %(var["name"].capitalize())
+
+def GetGlobalClassVarJSGetterFuncName(var):
+  return "get%sV8" %(var["name"].capitalize())
+
+def GetGlobalClassVarCSetterFuncName(var):
+  return "Set%sV8" %(var["name"].capitalize())
+
+def GetGlobalClassVarV8SetterFuncName(var):
+  return "set%sV8E" %(var["name"].capitalize())
+
+def GetGlobalClassVarJSSetterFuncName(var):
+  return "set%sV8" %(var["name"].capitalize())
+
+# The definition of Setter/Getter func is in cxx file where var is defined.
+def GenGlobalClassVarGetterSetter(var):
+  global thisSummary
+  classType = GetIdenticalType(var["type"])
+  classBasicType = GetIdenticalType(GetBasicType(var))
+  classBasicV8Type = classType + "V8"
+  varName = var["name"]
+  varNameV8 = varName.capitalize() + "V8"
+
+  if classType == classBasicType:
+    refStr = "&"
+    ptnStr = "*"
+  else:
+    refStr = ""
+    ptnStr = ""
+
+  getFuncName = GetGlobalClassVarCGetterFuncName(var)
+  s = \
+'''
+Handle<Value> %s::%s(const Arguments& args) {
+    HandleScope scope;
+    %s *%s = new %s(%s%s);
+
+    %s->Wrap(args.This());
+    return args.This();
+}
+'''%(classBasicV8Type, getFuncName, \
+     classBasicV8Type, varNameV8, classBasicV8Type, refStr, varName, \
+     varNameV8)
+
+  thisSummary["succGlobalClassVar"][getFuncName] = var
+
+  if var["constant"] == 1:
+    return s
+
+  setFuncName = GetGlobalClassVarCSetterFuncName(var)
+  s += \
+'''
+Handle<Value> %s::%s(const Arguments& args) {
+    HandleScope scope;
+    %s* obj = ObjectWrap::Unwrap<%s>(args.This());
+
+    %s = %s(obj->m_val);
+    return scope.Close(Undefined());
+}
+'''%(classBasicV8Type, setFuncName, \
+     classBasicV8Type, classBasicV8Type, \
+     varName, ptnStr)
+
+  thisSummary["succGlobalClassVar"][setFuncName] =  var
+  return s
+
+def GenGlobalVarSetFunc():
+  global thisSummary
+  s = "\nstatic void SetGlobalVarFunc(Handle<Object> obj) {\n"
+  for v8FuncName in thisSummary["succGlobalVar"]:
+    exportFuncName = re.sub("^Get", "get", v8FuncName);
+    exportFuncName = re.sub("^Set", "set", exportFuncName);
+
+    s += \
+'''
+    obj->Set(v8::String::NewSymbol("%s"),
+           FunctionTemplate::New(%s)->GetFunction());
+'''%(exportFuncName, v8FuncName)
+
+  s += "}\n"
+  return s
+
 def GenGlobalVarSetterAndGetter(global_vars):
 
   s = ""
@@ -816,35 +866,47 @@ def GenGlobalVarSetterAndGetter(global_vars):
     varType = var["type"]
     varName = var["name"]
     varNameV8 = varName + "V8"
-    if not CheckArgSanity(var, False, False):
+    if not CheckArgSanity(var, False, True):
+      thisSummary["failGlobalVar"].append(varName)
       continue
 
-    s += \
-'''Handle<Value> Get%sV8(const v8::Arguments &args) {
+    if IsClassArg(GetBasicType(var)):
+      s += GenGlobalClassVarGetterSetter(var)
+    else:
+      getFuncName = "Get%sV8" %(varName.capitalize())
+      setFuncName = "Set%sV8" %(varName.capitalize())
+      s += \
+'''Handle<Value> %s(const v8::Arguments &args) {
     HandleScope scope;
 
 %s
     return scope.Close(%s);
 }
-'''%(varName.capitalize(), \
+'''%(getFuncName, \
      AddIndent(GenFuncReturn(var, "", varName, varNameV8), 4),\
      varNameV8)
 
-    if var["constant"] == 1:
-      continue
+      thisSummary["succGlobalVar"].append(getFuncName)
+      if var["constant"] == 1:
+        continue
 
-    s += \
+      s += \
 '''
-Handle<Value> Set%sV8(const v8::Arguments &args) {
+Handle<Value> %s(const v8::Arguments &args) {
     HandleScope scope;
 
     V8_ASSERT(%s, "parameter for global var '%s' error");
 %s
     return scope.Close(Undefined());
 }
-'''%(varName.capitalize(), \
+
+'''%(setFuncName, \
      GenArgCheck(var, "args[0]"), varName, \
      AddIndent(GenArgTrans(var, 0, varName, "args[0]", "argV8_0", False), 4))
+
+      thisSummary["succGlobalVar"].append(setFuncName)
+
+  s += GenGlobalVarSetFunc()
 
   return s
 
@@ -855,7 +917,7 @@ def GenConstructorDecl(func):
   return s 
 
 thisSummary = {}
- 
+
 def GenClassDecl(name, c):
   global thisSummary
   s = \
@@ -869,25 +931,21 @@ private:
     static v8::Persistent<v8::Function> constructor;
 
 public:
+    explicit %s(%s *val);
+    explicit %s() {};
     %s *getCClass() {
       return m_val;
     }
     static void Init(v8::Handle<v8::Object> exports);
-'''%(GetV8ClassName(name), name, GetV8ClassName(name), name)
+'''%(GetV8ClassName(name), \
+     name, \
+     GetV8ClassName(name), \
+     GetV8ClassName(name), name, \
+     GetV8ClassName(name), \
+     name)
 
   for m in c["methods"]["public"]:
     if m["name"] == name:
-      if m["override"]:
-        for f in m["funcs"]:
-          if CheckSanity(f) == False:
-            s += ""
-          else:
-            s += "    " + GenConstructorDecl(f)
-      else:
-        if CheckSanity(m) == False:
-          s += ""
-        else:
-          s += "    " + GenConstructorDecl(m)
       continue
 
     flag = IsV8FuncGen(m)
@@ -897,24 +955,47 @@ public:
     static v8::Handle<v8::Value> %s(const v8::Arguments& args);''' \
     % GetV8FuncName(m)
 
+  for f in globalVar.cppHeaders.keys():
+    globalvars = globalVar.cppHeaders[f].global_vars
+    for idx, var in enumerate(globalvars):
+      if not CheckArgSanity(var, False, True):
+        continue
+      if GetIdenticalType(GetBasicType(var)) == name:
+         getFuncName = GetGlobalClassVarCGetterFuncName(var)
+         s += \
+'''
+    static v8::Handle<v8::Value> %s(const v8::Arguments& args);''' \
+    % (getFuncName)
+
+         if var["constant"] == 1:
+           continue
+
+         setFuncName = GetGlobalClassVarCSetterFuncName(var)
+         s += \
+'''
+    static v8::Handle<v8::Value> %s(const v8::Arguments& args);''' \
+    % (setFuncName)
+
   s += "\n};\n"
   return s
 
-def GenConstructor(name, func):
+def GenConstructor(name):
   global thisSumamry
 
-  if CheckSanity(func) == False:
-    printErr("Can't transfer: " + GetFuncDesc(func))
-    thisSummary["failFuncs"].append(name + "." + func["name"])   
-    return ""
+#  if CheckSanity(func) == False:
+#    printErr("Can't transfer: " + GetFuncDesc(func))
+#    thisSummary["failFuncs"].append(name + "." + func["name"])   
+#    return ""
+
   s = \
 '''
 // constructor
-%s::%s(%s) {
-    m_val = new %s(%s);
+%s::%s(%s * val) {
+    m_val = val;
 }
-''' % (GetV8ClassName(name), GetV8ClassName(name), GenArgList(func, True), name, GenArgList(func, False))
-  thisSummary["succFuncs"].append(name + "." + func["name"])   
+''' % (GetV8ClassName(name), GetV8ClassName(name), name)
+
+  thisSummary["succFuncs"].append(name + "." + name)
   return s
 
 def GenMethodHead(className, func):
@@ -942,6 +1023,7 @@ def GenMethodCall(func, className):
     return '''// TODO: operator %s override call''' %(func["name"][8:])
 
   sRetType = GetIdenticalType(func["rtnType"]["type"])
+  sRetBasicType = GetBasicType(func["rtnType"])
   if className == "":
     objStr = ""
   else:
@@ -970,7 +1052,7 @@ return scope.Close(Undefined());
     FreeMallocObj())
 
   else:
-    retName = "ret" #GetRetName(sRetType)
+    retName = "ret"
     retNameV8 = retName + "V8"
 
     # handle return type "void *" as "int *"
@@ -981,15 +1063,34 @@ return scope.Close(Undefined());
 '''
 %s %s = (%s)%s%s;
 %s
+'''% (sRetType, retName, sRetType, objStr, GenCall(func),\
+      argsReturnStr)
+
+    if IsClassArg(sRetBasicType):
+      s += \
+'''
+// Map C++ Object to V8 Object
+iter = CClassToJsObjMap.find(ret);
+%s
+if (iter != CClassToJsObjMap.end()) {
+    return iter->second;
+} else {
+    V8_ASSERT(false, "Don't find corresponding JSObj, \\
+              Please define it first in JS code");
+}
+'''% (FreeMallocObj())
+
+    else:
+
+      s += \
+'''
 // Convert C++ return value to V8
 %s
 %s
-return scope.Close(%s);''' \
-    % (sRetType, retName, sRetType, objStr, GenCall(func),\
-       argsReturnStr, \
-       GenFuncReturn(func["rtnType"], "", retName, retNameV8), \
-       FreeMallocObj(), \
-       retNameV8)
+return scope.Close(%s);
+'''% (GenFuncReturn(func["rtnType"], "", retName, retNameV8), \
+      FreeMallocObj(), \
+      retNameV8)
 
   return s
 
@@ -1094,6 +1195,30 @@ void %s::Init(Handle<Object> exports) {
         FunctionTemplate::New(%s)->GetFunction());
 ''' % (func["name"],  GetV8FuncName(func))
 
+  for f in globalVar.cppHeaders.keys():
+    globalvars = globalVar.cppHeaders[f].global_vars
+    for idx, var in enumerate(globalvars):
+      if GetIdenticalType(GetBasicType(var)) == className:
+         getFuncNameC = GetGlobalClassVarCGetterFuncName(var)
+         getFuncNameV8 = GetGlobalClassVarV8GetterFuncName(var)
+
+         s += \
+'''
+    tpl->PrototypeTemplate()->Set(v8::String::NewSymbol("%s"),
+        FunctionTemplate::New(%s)->GetFunction());
+'''% (getFuncNameV8, getFuncNameC)
+
+         if var["constant"] == 1:
+           continue
+
+         setFuncNameC = GetGlobalClassVarCSetterFuncName(var)
+         setFuncNameV8 = GetGlobalClassVarV8SetterFuncName(var)
+         s += \
+'''
+    tpl->PrototypeTemplate()->Set(v8::String::NewSymbol("%s"),
+        FunctionTemplate::New(%s)->GetFunction());
+'''% (setFuncNameV8, setFuncNameC)
+
   s += \
 '''
     constructor = Persistent<Function>::New(tpl->GetFunction());
@@ -1112,35 +1237,38 @@ def GenFuncNewContent(func):
   if not CheckSanity(func):
     return ""
 
-  className = GetV8ClassName(func["name"]);
-  argCheck = GenArgsCheckExpress(func);
+  className = func["name"]
+  classNameV8 = GetV8ClassName(func["name"])
+  argCheck = GenArgsCheckExpress(func)
   andStr = ""
   if (len(argCheck) > 0) :
     andStr = " && "
 
   s ='''
-  if ((args.Length() == %d)%s%s) {
+if ((args.Length() == %d)%s%s) {
     if (args.IsConstructCall()) {
-      // Invoked as constructor: `new %s(...)`
-      %s
-      %s *obj = new %s(%s);
-      obj->Wrap(args.This());
-      return args.This();
+        // Invoked as constructor: `new %s(...)`
+%s
+        %s *obj = new %s(%s);
+
+        JSObj = Persistent<Object>::New(Local<Object>::Cast(args.This()));
+        CClassToJsObjMap.insert(std::pair<void *, Persistent<Object> >(obj, JSObj));
+
+        %s *objV8 = new %s(obj);
+        objV8->Wrap(JSObj);
+        return JSObj;
     } else {
-      // Invoked as plain function `%s(...)`, turn into construct call.
-      const int argc = %d;
-      Local<Value> argv[argc] = { %s };
-      return scope.Close(constructor->NewInstance(argc, argv));
+        // Invoked as plain function `%s(...)`, turn into construct call.
+        const int argc = %d;
+        Local<Value> argv[argc] = { %s };
+        return scope.Close(constructor->NewInstance(argc, argv));
     }
-  }'''%(len(func["parameters"]),\
-        andStr,\
-        argCheck,\
-        className,\
-        AddIndent(GenArgsTrans(func), 6),\
-        className,\
-        className,\
-        GenArgList(func, False),\
-        className,\
+}'''%(len(func["parameters"]), andStr, argCheck, \
+        classNameV8, \
+        AddIndent(GenArgsTrans(func), 8), \
+        className, className, GenArgList(func, False), \
+        classNameV8, classNameV8,
+        classNameV8,\
         len(func["parameters"]),\
         GenArgArrayList(func))
   return s
@@ -1160,13 +1288,22 @@ Handle<Value> %s::New(const Arguments& args) {
     if func["override"] and (func["name"] == className):
       for f in func["funcs"]:
         if f["constructor"]:
-          s += GenFuncNewContent(f);
+          s += AddIndent(GenFuncNewContent(f), 4);
     elif (not func["override"]) and (func["constructor"] == True):
-      s += GenFuncNewContent(func);
+      s += AddIndent(GenFuncNewContent(func), 4);
 
-  s += '''
+  s += \
+'''else if ((args.Length() == 1) && args[0]->IsString()) {
+        v8::String::AsciiValue arg0(args[0]->ToString());
+        if (strcmp(*arg0, "%s") == 0) {
+            %s *objV8 = new %s();
+            objV8->Wrap(args.This());
+            return args.This();
+        }
+    }  
+    V8_ASSERT(false, "parameters error!");
 }
-'''
+''' %(INSTANCE_V8CLASS_ARG, v8ClassName, v8ClassName)
   return s
 
 def CheckVritualFunc(funcs):
@@ -1187,18 +1324,18 @@ def CheckAbstractClass(c):
 def GenClass(className, c):
   s = GenFuncNew(className, c);
 
+  s += GenConstructor(className)
+
   funcs = c["methods"]["public"]
   for func in funcs:
     if func["override"]:
       if func["name"] == className:
-        for f in func["funcs"]:
-          if f["constructor"]:
-            s += GenConstructor(className, f)
+        continue
       else:
         s += GenOverride(className, func)
     else:
       if func["constructor"]:
-        s += GenConstructor(className, func)
+        continue
       else:
         s += GenMethod(className, func)
 
@@ -1283,8 +1420,6 @@ def GenModuleDecl(module, cppHeader):
 #include <v8.h>
 #include "%s.h"
 
-using namespace v8;
-
 #ifndef V8_EXCEPTION
 #define V8_EXCEPTION(info) { \\
     v8::ThrowException(Exception::Error(v8::String::New(info))); \\
@@ -1328,7 +1463,10 @@ def GenModule(module, cppHeader):
 #include "stdlib.h"
 #include "string.h"
 #include "%s"
-''' % (module, CALLBACK_DEF)
+
+using namespace v8;
+
+''' % (module, GLOBAL_DEF)
 
   for c in cppHeader.classes:
     classT = cppHeader.classes[c]
@@ -1346,11 +1484,10 @@ def GenModule(module, cppHeader):
 
   s += GenGlobalVarSetterAndGetter(cppHeader.global_vars)
 
-  s += GenSetGlobalVarFunc(cppHeader.global_vars)
-
   s += GenInit(module, cppHeader)
 
   t = GetComment()
+
   t += GenExtraIncludeFiles()
 
   t += s
@@ -1491,28 +1628,36 @@ NODE_MODULE(%s, exportV8)
   fp.close()  
 
 def GenCallback():
-#Generate Wrapper call of Function Pointer
   s = GetComment();
   s += \
 '''#include "%s"
+#include <map>
 
 Persistent<Function> cbArray[%d];
-'''%(CALLBACK_DEF, globalVar.FuncPointerCnt)
+
+std::map <void *, Persistent<Object> > CClassToJsObjMap;
+std::map <void *, Persistent<Object> >::iterator iter;
+Persistent<Object> JSObj;
+
+'''%(GLOBAL_DEF, globalVar.FuncPointerCnt)
+
+  #Generate Wrapper call of Function Pointer
   s += GenCallbackFuncs()
 
-  f = OUTPUT_DEV_PATH + "/" + CALLBACK_CPP
+  f = OUTPUT_DEV_PATH + "/" + GLOBAL_CPP
   printDbg("finished " + f)
   fp = open(f, "w+")
   fp.write(s)
   fp.close()
 
-#Generate Wrapper call definition of Function Pointer
-  m = CALLBACK_DEF.replace('.', '_').upper()
+  # Generate global var decl and global func decl
+  m = GLOBAL_DEF.replace('.', '_').upper()
   s = GetComment()
   s += \
 '''#ifndef %s
 #define %s
 
+#include <map>
 #include <node.h>
 #include <v8.h>
 
@@ -1522,8 +1667,13 @@ using namespace v8;
   s += \
 '''extern Persistent<Function> cbArray[%d];
 
+extern std::map <void *, Persistent<Object> > CClassToJsObjMap;
+extern std::map <void *, Persistent<Object> >::iterator iter;
+extern Persistent<Object> JSObj;
+
 ''' %(globalVar.FuncPointerCnt)
 
+  #Generate Wrapper call definition of Function Pointer
   s += GenCallbackFuncsDecl()
 
   s += \
@@ -1531,7 +1681,7 @@ using namespace v8;
 #endif
 '''
 
-  f = OUTPUT_DEV_PATH + "/" + CALLBACK_DEF
+  f = OUTPUT_DEV_PATH + "/" + GLOBAL_DEF
   printDbg("finished " + f)
   fp = open(f, "w+")
   fp.write(s)
@@ -1552,6 +1702,7 @@ def GenC(module, cppHeader):
   global thisSummary
   thisSummary = {"succFuncs":[], "failFuncs": [], \
                  "succGlobalVar": [], "failGlobalVar": [], \
+                 "succGlobalClassVar": {}, "failGlobalClassVar": {}, \
                  "cpp":[], "h":[]}
 
   printDbg("transfering " + module)
@@ -1586,6 +1737,7 @@ def GenC(module, cppHeader):
   summary[module] = thisSummary
   printDbg("generate " + f)
 
+
 def DumpFunctionSummary():
   global summary
   totalSucc = 0
@@ -1600,7 +1752,7 @@ def DumpFunctionSummary():
     s += fmt % (idx, len(item["succFuncs"]), len(item["failFuncs"]))    
   s += "================================\n"
 
-  s += "\nSummary of global var set/get functions\n"
+  s += "\nSummary of global common var set/get functions\n"
   s += "================================\n"
   for idx in summary:
     item = summary[idx]
@@ -1609,6 +1761,14 @@ def DumpFunctionSummary():
     s += fmt % (idx, len(item["succGlobalVar"]), len(item["failGlobalVar"]))    
   s += "================================\n"
 
+  s += "\nSummary of global class var set/get functions\n"
+  s += "================================\n"
+  for idx in summary:
+    item = summary[idx]
+    totalSucc += len(item["succGlobalClassVar"])
+    totalFail += len(item["failGlobalClassVar"])
+    s += fmt % (idx, len(item["succGlobalClassVar"]), len(item["failGlobalClassVar"]))    
+  s += "================================\n"
   s += fmt % ("total", totalSucc, totalFail)
   printLog(s)
 
@@ -1656,7 +1816,7 @@ def BuildGyp():
       files += "'" + GYP_SRC_PATH + f + "',\n"
 
   files += "'" + GYP_SRC_PATH + EXPORT_CPP + "',\n"
-  files += "'" + GYP_SRC_PATH + CALLBACK_CPP + "'\n"
+  files += "'" + GYP_SRC_PATH + GLOBAL_CPP + "'\n"
   files = AddIndent(files, 6)
 
   inc = ""
@@ -1698,3 +1858,55 @@ def BuildGyp():
 }
 ''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc)
   return gypContent
+
+def GenGlobalClassVarJsExport():
+  global summary
+  f = GYP_PATH + Global_CLASS_VAR_FILE
+  fp = open(f, "w")
+
+  methodNames = []
+  s = \
+'''var IO = require('bindings')('galileo.node')
+'''
+
+  for idx in summary:
+    thisS = summary[idx]
+    for funcName in thisS["succGlobalClassVar"].keys():
+      var = thisS["succGlobalClassVar"][funcName]
+      varType = GetIdenticalType(GetBasicType(var))
+
+      if re.match("^Get", funcName):
+        funcNameJS = GetGlobalClassVarJSGetterFuncName(var)
+        funcNameV8 = GetGlobalClassVarV8GetterFuncName(var)
+        s += \
+'''
+IO.%s = function() {
+  var tmp = new IO.%s("%s");
+  tmp.%s();
+  return tmp;
+}
+''' %(funcNameJS, \
+      varType, INSTANCE_V8CLASS_ARG, \
+      funcNameV8);
+
+        methodNames.append("%s" %(funcNameJS))
+
+      elif re.match("^Set", funcName):
+        funcNameJS = GetGlobalClassVarJSSetterFuncName(var)
+        funcNameV8 = GetGlobalClassVarV8SetterFuncName(var)
+        s += \
+'''
+IO.%s = function(value) {
+  value.%s();
+}
+''' % (funcNameJS, funcNameV8)
+        methodNames.append("%s" %(funcNameJS))
+      else:
+        raise("Unexpected function %s\n", funcName)
+
+  s += '''
+module.exports = IO;
+'''
+
+  fp.write(s)
+  fp.close()

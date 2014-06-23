@@ -1,6 +1,10 @@
 #include <variant.h>
 
 #ifdef IOLIB_OVERRIDE
+#include "TTYUART.h"
+extern TTYUARTClass Serial;
+extern TTYUARTClass Serial1;
+extern TTYUARTClass Serial2;
 
 #define LINUX_BOOTLOADER_TTY		"/dev/ttyGS0"
 #define LINUX_SPIDEV			"/dev/spidev1.0"
