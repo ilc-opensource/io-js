@@ -20,6 +20,7 @@ clean:
 	make -C $(ROOT_DIR)/target/device/libio clean
 	make -C $(ROOT_DIR)/target/device/board clean
 	make -C $(ROOT_DIR)/utils/autogen/      clean
+	./gen_browser_js.sh -c
 
 test:
 	buster-test

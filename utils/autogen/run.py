@@ -8,6 +8,7 @@ from config      import *
 from genJsApi    import *
 from genJsApiMap import *
 from genC        import *
+from genShell    import *
 
 def ParseHeader(name):
   try:
@@ -95,4 +96,5 @@ if __name__ == "__main__":
   GenCallback()
   GenGyp()
   GenGlobalClassVarJsExport()
+  GenShell()
   DumpSummary()
