@@ -1,14 +1,21 @@
-OUTPUT=bundle.js
-ROOT=.
 
-while getopts o:lc option
+TARGET_DIR=.
+ROOT=.
+NAME=iotio
+VER=general
+OUTPUT=$NAME-$VER.js
+OUTPUT_MINI=$NAME-$VER.mini.js
+while getopts v:o:d:lc option
 do
     case "$option" in
+        v)
+            VER=$OPTARG;;
         o)
-            OUTPUT=$OPTARG;;
+            NAME=$OPTARG;;
+        d)  TARGET_DIR=$OPTARG;;
         c)
-            echo "clean $OUTPUT"
-            rm -rf $OUTPUT
+            echo "rm -rf  $TARGET_DIR/$OUTPUT $TARGET_DIR/$OUTPUT_MINI"
+            rm -rf  $TARGET_DIR/$OUTPUT $TARGET_DIR/$OUTPUT_MINI
             exit 0;;
         \?)
             echo ""
@@ -21,44 +28,54 @@ do
     esac
 done
 
-echo "creating $OUTPUT" 
+NAME=$NAME
+OUTPUT=$NAME-$VER.js
+OUTPUT_MINI=$NAME-$VER.mini.js
 
-FILE="$ROOT/target/companion/lib/jquery/jay_jquery.js"
-echo $FILE
-cat $FILE > $OUTPUT
+echo "Generate a bundle Javascript file for browser"
+echo "=============================="
+echo "SRC ROOT:     $ROOT"
+echo "TARGET DIR:   $TARGET_DIR"
+echo "OUTPUT:       $OUTPUT"
+echo "OUTPUT MINI:  $OUTPUT_MINI"
+echo "=============================="
 
-FILE="$ROOT/target/companion/lib/browser_init.js"
-echo $FILE
-cat $FILE >> $OUTPUT
+echo "// combined all of need libraries together with tools" > $OUTPUT
 
-FILE="$ROOT/target/companion/lib/utils.js"
-echo $FILE
-cat $FILE >> $OUTPUT
+FILES="
+  $ROOT/target/companion/lib/jquery/jay_jquery.js 
+  $ROOT/target/companion/lib/browser_init.js
+  $ROOT/target/companion/lib/utils.js
+  $ROOT/target/companion/lib/submit/rpc.js
+  $ROOT/target/companion/lib/submit/print.js
+  $ROOT/target/companion/lib/board/galileo.js
+  $ROOT/target/companion/index.js
+  $ROOT/target/extension/led.js
+  $ROOT/target/extension/index.js
+  $ROOT/target/index.js
+"
 
-FILE="$ROOT/target/companion/lib/submit/rpc.js"
-echo $FILE
-cat $FILE >> $OUTPUT
+echo ""
+echo "put below files into $TARGET_DIR/$OUTPUT"
+echo ""
 
-FILE="$ROOT/target/companion/lib/submit/print.js"
-echo $FILE
-cat $FILE >> $OUTPUT
+for f in $FILES
+do
+  echo $f
+  cat "$f" >> $TARGET_DIR/$OUTPUT
+done
 
-FILE="$ROOT/target/companion/lib/board/galileo.js"
-echo $FILE
-cat $FILE >> $OUTPUT
+echo ""
+echo "verify tool"
+TOOL=uglifyjs
+which $TOOL
+RET=$?
 
-FILE="$ROOT/target/companion/index.js"
-echo $FILE
-cat $FILE >> $OUTPUT
+if [ $RET -eq 0 ]; then
+  echo "translate to $TARGET_DIR/$OUTPUT_MINI" 
+  $TOOL $TARGET_DIR/$OUTPUT > $TARGET_DIR/$OUTPUT_MINI 
+  echo "OK" 
+else
+  echo "have not installed $TOOL, abort"
+fi
 
-FILE="$ROOT/target/common/led.js"
-echo $FILE
-cat $FILE >> $OUTPUT
-
-FILE="$ROOT/target/common/index.js"
-echo $FILE
-cat $FILE >> $OUTPUT
-
-FILE="$ROOT/target/index.js"
-echo $FILE
-cat $FILE >> $OUTPUT

@@ -1,20 +1,18 @@
 (function(exports, global) {
 
-var HighLevel;
+var Extension;
 
 if(typeof require === 'function') {
 
-  HighLevel = {
+  Extension = {
     Led: require('./led.js').Led,
-//    Sensor: require('./sensors/basic_sensor.js').Sensor
   };
 } else {
-  HighLevel = {
+  Extension = {
     Led: global.Led,
-//    Sensor: global.IOLIB.Sensor
   };
 }
 
-exports.HighLevel = HighLevel;
+exports.Extension = Extension;
 
 })(typeof exports === 'object'? exports: this.IOLIB, this.IOLIB);

@@ -1609,7 +1609,20 @@ def GenPostGlobalInit():
 '''
 }
 
-NODE_MODULE(%s, exportV8)
+Handle<Value> IO(const Arguments& args) {
+
+  exportV8(args.This());
+
+  return args.This();
+}
+
+void Init(Handle<Object> exports) {
+  exports->Set(String::NewSymbol("IO"),
+               FunctionTemplate::New(IO)->GetFunction());
+}
+
+
+NODE_MODULE(%s, Init)
 ''' % EXPORT_MODULE
   f = OUTPUT_DEV_PATH + "/" + EXPORT_CPP
   printDbg("finished " + f)

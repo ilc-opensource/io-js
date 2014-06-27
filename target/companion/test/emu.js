@@ -1,0 +1,11 @@
+var IOLIB = require('../');
+var io = new IOLIB.IO({
+  'emu': true,
+  'log': true,
+  'rpc': true,
+  'hostname': 'localhost',
+  'port': 2000
+});
+
+io.digitalWrite(13, io.HIGH);
+//io.rpc('test0', 1, 2);

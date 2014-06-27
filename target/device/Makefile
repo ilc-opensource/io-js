@@ -10,6 +10,6 @@ configure:
 
 clean:
 	node-gyp clean
-	rm -rf build libio 
+	rm -rf build 
 
 .PHONY: build rebuild configure clean

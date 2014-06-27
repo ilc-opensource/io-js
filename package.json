@@ -1,9 +1,9 @@
 {
-  "author" : "Intel",
+  "author" : "Smart things innovation team of Intel Labs China",
 
-  "name"   : "io-js",
+  "name"   : "iot-io",
 
-  "description" : "JS binding for IO library",
+  "description" : "Javascript IOT IO library",
 
   "version" : "0.5.0",
 

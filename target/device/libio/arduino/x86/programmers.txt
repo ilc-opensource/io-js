@@ -1,7 +1,0 @@
-avrispmkii.name=Intel Izmir DL Tool
-avrispmkii.communication=usb
-avrispmkii.protocol=stk500v2
-avrispmkii.program.protocol=stk500v2
-avrispmkii.program.tool=izmirdl
-avrispmkii.program.extra_params=-Pusb
-
