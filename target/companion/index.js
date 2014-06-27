@@ -1,6 +1,18 @@
 
 (function(exports, global) {
 
+/**
+  @class IO
+  @param {Object} options 
+  @param {Boolean} [options.log=false] - dump log
+  @param {Boolean} [options.quickInit=true] - quickly init galileo IO
+  @param {Boolean} [options.emu=false] - Run in emulation mode
+  @param {Boolean} [options.fake=false] - alias of options.emu
+  @param {Boolean} [options.rpc=false] - enable RPC client
+  @param {String}  [options.hostname=undefined] - remote RPC server's IP address
+  @param {Integer} [options.port=undefined] - remote RPC server's port
+ 
+ */
 exports.IO =  function(config) {
 
   var self = this;

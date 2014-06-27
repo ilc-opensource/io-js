@@ -5,10 +5,14 @@ import os
 def GenClassConstructor(className):
   return \
 '''
+/**
+  @constructor
+  @name IO#%s
+ */
 %s = function() {
   return self.submit.classReq('%s', arguments, this);
 };
-''' % (className, className)
+''' % (className, className, className)
 
 def GenClassConstructorMap(className):
   return \
@@ -21,10 +25,14 @@ def GenClassConstructorMap(className):
 def GenClassMethod(className, funcName):
   return \
 '''
+/**
+  @function IO#%s#%s
+  @instance
+*/
 %s.prototype.%s = function() {
   return self.submit.classMethodReq('%s', '%s', arguments, this);
 };
-''' % (className, funcName, className, funcName)
+''' % (className, funcName, className, funcName, className, funcName)
  
 def GenClassMethodMap(className, funcName):
   return \
@@ -74,9 +82,14 @@ def GenJsConst(defines):
       continue
     s += \
 '''
+  /**
+  @constant IO#%s
+  @desc %s
+  */
   self.%s = %s;
-''' % (macros[0], macros[1])
+''' % (macros[0], macros[1], macros[0], macros[1])
   return s
+
 
 def GenJsEnumConst(enums):
   s = ''
@@ -84,8 +97,12 @@ def GenJsEnumConst(enums):
     for v in enum["values"]:
       s += \
 '''
+  /**
+  @constant IO#%s
+  @desc %s
+  */
   self.%s = %s;
-''' %(v["name"], v["value"])
+''' %(v["name"], v["value"], v["name"], v["value"])
   return s
 
 def GenPreFuncJsApi():
@@ -99,7 +116,6 @@ def GenPreFuncJsApi():
 /*********************************************
 Generated with autogen tool
 *********************************************/
-
 var Board = function(options) {
 
   submit = options.submit;
@@ -220,10 +236,15 @@ def GenFuncJsApi(module, func):
   funcName = func["name"]
   return \
 '''
+  /**
+   @function IO#%s
+   @type Function
+   @instance
+   */
   self.%s = function() {
     return self.submit.funcReq('%s', arguments);
   };
-''' % (funcName, funcName)
+''' % (funcName, funcName, funcName)
 
 def GenFuncJsApiMap(module, func):
   funcName = func["name"]
