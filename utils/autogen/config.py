@@ -3,7 +3,7 @@ INPUT_DECL_PATHS  = [
 #   "../../../pia-sdk-repo/iolib/arduino/arduiPIA.h"
 ]
 
-AUTOGEN_TEST = 1
+AUTOGEN_TEST = 0
 
 if AUTOGEN_TEST == 1:
   INPUT_DECL_PATHS  = [
