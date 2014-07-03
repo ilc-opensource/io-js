@@ -102,7 +102,8 @@ def GenArgCheck(arg, argName):
   elif IsEnumArg(argBasicType):
     typeCheck = "IsInt32"
   elif (arg["pointer"] == 1 or arg["array"] == 1):
-    if (GetIdenticalType(arg["type"]) == "char*"):
+    if (GetIdenticalType(arg["type"]) == "char*" \
+      or (GetIdenticalType(arg["type"]) == "char" and arg["array"] == 1)):
       return "(%s->IsString() || %s->IsObject())" %(argName, argName)
     else:
       typeCheck = "IsArray"
@@ -169,7 +170,7 @@ if (%s->IsString()) {
     for (%s = 0; %s < %s; %s++) {
         if (oldStr[%s] != %s[%s])
             V8_ASSERT(false, "String %s is Changed in C function, \\
-Please Use Buffer or Integer Array to map 'char *' in JS");
+                      Please Use Buffer or Integer Array to map 'char *' in JS");
     }
 } else {
     Local<Array> %s = Local<Array>::Cast(%s);
@@ -215,8 +216,6 @@ def GenArrayArgReturn(arg, idx, argCName, argMiddleName):
 
 def GenStructArgReturn(arg, idx, argCName, argV8Name, argMiddleName):
   s = ""
-#  if arg["pointer"] != 1:
-#    return s
 
   if (arg["function_pointer"] != {} and \
       arg["function_pointer"] != 0) :
@@ -280,12 +279,10 @@ def GenArgReturn(idx, arg):
     s = GenStructArgReturn(arg, idx, argCName, argV8Name, argMiddleName)
   elif (GetIdenticalType(argBasicType) == "char"):
     s = GenStringArgReturn(arg, idx, argCName, argV8Name, argMiddleName)
-    globalVar.mallocObj.append(argCName)
   elif (IsClassArg(argBasicType)):
     s = ""
   else:
     s = GenArrayArgReturn(arg, idx, argCName, argMiddleName)
-    globalVar.mallocObj.append(argCName)
   return s
 
 def GenRetLoopCnt(idx):
@@ -294,10 +291,8 @@ def GenRetLoopCnt(idx):
 def GenRetArrayLen(idx):
   return "retLen%s" %(idx)
 
-def GenArrayReturn(rtn, idx, rtnCName, rtnArrayV8Name):
+def GenArrayReturn(rtn, idx, rtnCName, rtnArrayV8Name, needNewTargName):
   s = ""
-#  if rtn["pointer"] != 1:
-#    return s
 
   rtnType = rtn["type"]
   rtnBasicType = GetBasicType(rtn)
@@ -311,21 +306,31 @@ def GenArrayReturn(rtn, idx, rtnCName, rtnArrayV8Name):
   loopcnt = GenRetLoopCnt(idx)
   arrayLen = GenRetArrayLen(idx)
   arrayName = rtnArrayV8Name
-  s = \
-'''Local<Array> %s = Array::New();
+  if needNewTargName:
+    s += "Local<Array> "
+    cast = arrayName
+  else:
+    cast = "Local<Array>::Cast(%s)" %(arrayName)
+
+  s += \
+'''%s = Array::New();
 int %s;
 for (%s = 0; *(%s + %s) != 0; %s ++)
-  %s->Set(%s, %s);
+    %s->Set(%s, %s);
 '''%(arrayName, \
     loopcnt,
     loopcnt, rtnCName, loopcnt, loopcnt, \
-    arrayName, loopcnt, GetV8Value("%s[%s]" %(rtnCName, loopcnt), rtnUniqBasicType))
+    cast, loopcnt, GetV8Value("%s[%s]" %(rtnCName, loopcnt), rtnUniqBasicType))
   return s
 
-def GenCommonReturn(rtnType, rtnCName, rtnV8Name):
+def GenCommonReturn(rtnType, rtnCName, rtnV8Name, needNewTargName):
   rtnType = GetIdenticalType(rtnType)
-  s = \
-'''Handle<Value> %s = %s;
+  s = ""
+  if needNewTargName:
+    s += "Handle<Value> "
+
+  s += \
+'''%s = %s;
 ''' %(rtnV8Name, GetV8Value(rtnCName, rtnType))
   return s
 
@@ -335,9 +340,13 @@ def GenEnumReturn(rtnCName, rtnV8Name):
 ''' %(rtnV8Name, GetV8Value(rtnCName, "int"))
   return s
 
-def GenStringReturn(rtn, idx, rtnCName, rtnV8Name):
-  s = \
-'''Handle<Value> %s = v8::String::New((char*)%s);
+def GenStringReturn(rtn, idx, rtnCName, rtnV8Name, needNewTargName):
+  s = ""
+  if needNewTargName:
+    s += "Handle<Value> "
+
+  s += \
+'''%s = v8::String::New((char*)%s);
 ''' %(rtnV8Name, rtnCName)
   return s
 
@@ -367,14 +376,14 @@ def GenStructReturn(rtn, idx, rtnCName, rtnV8Name):
     fldName = prop["name"]
     objName = "%s_%d" %(rtnV8Name, idxs)
     s += GenFuncReturn(prop, "%s%d" %(idx, idxs), \
-           rtnCName + join + fldName, objName)
+           rtnCName + join + fldName, objName, True)
     s += \
 '''%s->Set(String::New("%s"), %s);
 
 '''% (rtnV8Name, fldName, objName)
   return s
 
-def GenFuncReturn(rtn, idx, rtnCName, rtnV8Name):
+def GenFuncReturn(rtn, idx, rtnCName, rtnV8Name, needNewTargName):
   rtnBasicType = GetBasicType(rtn)
   rtnUniqType = GetIdenticalType(rtn["type"])
 
@@ -382,12 +391,12 @@ def GenFuncReturn(rtn, idx, rtnCName, rtnV8Name):
     s = GenStructReturn(rtn, idx, rtnCName, rtnV8Name)
   elif (IsEnumArg(rtnUniqType)):
     s = GenEnumReturn(rtnCName, rtnV8Name)
-  elif (rtnUniqType == "char*"):
-    s = GenStringReturn(rtn, idx, rtnCName, rtnV8Name)
+  elif (rtnUniqType == "char*") or (rtnUniqType == "char" and rtn["array"] == 1):
+    s = GenStringReturn(rtn, idx, rtnCName, rtnV8Name, needNewTargName)
   elif (rtn["pointer"] == 1 or rtn["array"] == 1):
-    s = GenArrayReturn(rtn, idx, rtnCName, rtnV8Name)
+    s = GenArrayReturn(rtn, idx, rtnCName, rtnV8Name, needNewTargName)
   else:
-    s = GenCommonReturn(rtnUniqType, rtnCName, rtnV8Name)
+    s = GenCommonReturn(rtnUniqType, rtnCName, rtnV8Name, needNewTargName)
   return s
 
 def GenArgsReturn(func):
@@ -437,8 +446,20 @@ def GenStringArgTran(arg, idx, argCName, argV8Name, argMiddleName, needNewTargNa
   if needNewTargName:
     s = \
 '''%s *%s;''' %(argUniqBasicType, argCName)
+    m1 = \
+'''%s = strlen(*%s) + 1;
+%s = (%s)malloc(%s * sizeof(%s));
+''' %(arrayLen, argMiddleName, \
+    argCName, argUniqType, arrayLen, argUniqBasicType)
+
+    m2 = \
+'''%s = (%s)malloc(%s * sizeof(%s));
+'''%(argCName, argUniqType, arrayLen, argUniqBasicType)
+    globalVar.mallocObj.append(argCName)
   else:
     s = ""
+    m1 = ""
+    m2 = ""
 
   s += \
 '''
@@ -446,13 +467,12 @@ int %s;
 int %s;
 if (%s->IsString()) {
     v8::String::AsciiValue %s(%s->ToString());
-    %s = strlen(*%s) + 1;
-    %s = (%s)malloc(%s * sizeof(%s));
+%s
     strcpy(%s, *%s);
 } else {
     Local<Array> %s = Local<Array>::Cast(%s);
     %s = %s->Length() + 1;
-    %s = (%s)malloc(%s * sizeof(%s));
+%s
     for (%s = 0; %s < %s - 1; %s++) {
         Local<Value> %s_%s = %s->Get(%s);
         V8_ASSERT(%s_%s->%s(), "%s[%%d] parameter error", %s);
@@ -464,13 +484,12 @@ if (%s->IsString()) {
     arrayLen, \
     argV8Name, \
     argMiddleName, argV8Name, \
-    arrayLen, argMiddleName, \
-    argCName, argUniqType, arrayLen, argUniqBasicType, \
+    AddIndent(m1, 4), \
     argCName, argMiddleName, \
 #else
     argMiddleName, argV8Name,\
     arrayLen, argMiddleName, \
-    argCName, argUniqType, arrayLen, argUniqBasicType,\
+    AddIndent(m2, 4), \
     loopcnt, loopcnt, arrayLen, loopcnt, \
     argMiddleName, loopcnt, argMiddleName, loopcnt,\
     argMiddleName, loopcnt, GetV8TypeCheck(argUniqBasicType), argCName, loopcnt, \
@@ -502,27 +521,32 @@ def GenArrayArgTran(arg, idx, argCName, argV8Name, argMiddleName, needNewTargNam
   arrayLen = GenArrayLen(idx)
 
   if needNewTargName:
-    typeStr = \
-'''%s%s;''' %(GetNoQualifierType(argType), argCName)
+    newVarStr = \
+'''%s%s;
+int %s = %s->Length();
+%s = (%s)malloc(%s * sizeof(%s));
+'''%(GetNoQualifierType(argType), argCName, \
+     arrayLen, argMiddleName, \
+     argCName, GetNoQualifierType(argType), \
+     arrayLen, GetNoQualifierType(argBasicType))
+    globalVar.mallocObj.append(argCName)
   else:
-    typeStr = ""
+    newVarStr = \
+'''int %s = %s->Length();
+'''%(arrayLen, argMiddleName)
 
   s = \
 '''int %s;
 Local<Array> %s = Local<Array>::Cast(%s);
-int %s = %s->Length();
 %s
-%s = (%s)malloc(%s * sizeof(%s));
-for (%s = 0; %s < (int)%s->Length(); %s++) {
+for (%s = 0; %s < %s; %s++) {
   Local<Value> %s_%s = %s->Get(%s);
   V8_ASSERT(%s_%s->%s(), "%s[%%d] parameter error", %s);
   %s[%s] = (%s)%s;
 }'''%(loopcnt, \
     argMiddleName, argV8Name,\
-    arrayLen, argMiddleName, \
-    typeStr, \
-    argCName, GetNoQualifierType(argType), arrayLen, GetNoQualifierType(argBasicType), \
-    loopcnt, loopcnt, argMiddleName, loopcnt, \
+    newVarStr, \
+    loopcnt, loopcnt, arrayLen, loopcnt, \
     argMiddleName, loopcnt, argMiddleName, loopcnt,\
     argMiddleName, loopcnt, GetV8TypeCheck(argUniqBasicType), argCName, loopcnt, \
     argCName, loopcnt, GetNoQualifierType(argBasicType), \
@@ -605,13 +629,11 @@ V8_ASSERT(%s, "%s.%s parameter error");
   else:
     sName = argCName + "T"
 
-  if needNewTargName:
-    typeStr = GetNoQualifierType(argBasicType) + " "
-  else:
-    typeStr = ""
+  if needNewTargName or argType != argBasicType :
+    s += \
+'''%s %s;
+''' %(GetNoQualifierType(argBasicType), sName)
 
-  s += \
-'''%s%s = {''' %(typeStr, sName)
   for idxs, prop in enumerate(props):
     fldName = prop["name"]
     fieldValue = "%s%d"%(argCName, idxs)
@@ -619,10 +641,8 @@ V8_ASSERT(%s, "%s.%s parameter error");
       s +=""
     else:
       s += \
-'''%s:%s''' %(fldName, fieldValue)
-    if idxs != (len(props) -1):
-      s += ", "
-  s += "};\n"
+'''%s.%s = %s;
+''' %(sName, fldName, fieldValue)
 
   if argType != argBasicType:
     if needNewTargName:
@@ -631,8 +651,13 @@ V8_ASSERT(%s, "%s.%s parameter error");
       typeStr = ""
 
     s += \
-'''%s%s = &%s;
-''' %(typeStr, argCName, sName)
+'''%s%s = (%s)malloc(sizeof(%s));
+memcpy(%s, &%s, sizeof(%s));
+''' %(typeStr, argCName, argType, argBasicType, \
+    argCName, sName, argBasicType)
+
+    if needNewTargName:
+      globalVar.mallocObj.append(argCName)
 
   return s
 
@@ -883,7 +908,7 @@ def GenGlobalVarSetterAndGetter(global_vars):
     return scope.Close(%s);
 }
 '''%(getFuncName, \
-     AddIndent(GenFuncReturn(var, "", varName, varNameV8), 4),\
+     AddIndent(GenFuncReturn(var, "", varName, varNameV8, True), 4),\
      varNameV8)
 
       thisSummary["succGlobalVar"].append(getFuncName)
@@ -1001,7 +1026,7 @@ def GenConstructor(name):
 def GenMethodHead(className, func):
   if className != "":
     v8ClassName = GetV8ClassName(className)
-    
+
     return \
 '''
 %s
@@ -1039,7 +1064,7 @@ def GenMethodCall(func, className):
   s = \
 '''
 // Call C++ function'''
-  
+
   if sRetType == "" or sRetType == "void":
     s += \
 '''
@@ -1088,7 +1113,7 @@ if (iter != CClassToJsObjMap.end()) {
 %s
 %s
 return scope.Close(%s);
-'''% (GenFuncReturn(func["rtnType"], "", retName, retNameV8), \
+'''% (GenFuncReturn(func["rtnType"], "", retName, retNameV8, True), \
       FreeMallocObj(), \
       retNameV8)
 
@@ -1118,7 +1143,7 @@ def GenOverride(className, func):
       thisSummary["failFuncs"].append(head + f["name"])
       printErr("Can't transfer: " + GetFuncDesc(func))
       continue;
-    
+
     thisSummary["succFuncs"].append(head + f["name"])
 
     temp  =  GenArgsTrans(f)
@@ -1282,7 +1307,7 @@ Persistent<Function> %s::constructor;
 Handle<Value> %s::New(const Arguments& args) {
     HandleScope scope;
 '''%(v8ClassName, v8ClassName)
-  
+
   funcs = c["methods"]["public"]
   for func in funcs:
     if func["override"] and (func["name"] == className):
@@ -1300,7 +1325,7 @@ Handle<Value> %s::New(const Arguments& args) {
             objV8->Wrap(args.This());
             return args.This();
         }
-    }  
+    }
     V8_ASSERT(false, "parameters error!");
 }
 ''' %(INSTANCE_V8CLASS_ARG, v8ClassName, v8ClassName)
@@ -1420,23 +1445,6 @@ def GenModuleDecl(module, cppHeader):
 #include <v8.h>
 #include "%s.h"
 
-#ifndef V8_EXCEPTION
-#define V8_EXCEPTION(info) { \\
-    v8::ThrowException(Exception::Error(v8::String::New(info))); \\
-    }
-#endif
-
-#ifndef V8_ASSERT
-#define V8_ASSERT(cond, ...) \\
-    if(!(cond)) {  \\
-        char buffer[512]; \\
-        sprintf(buffer, __VA_ARGS__); \\
-        V8_EXCEPTION(buffer); \\
-        return scope.Close(Undefined()); \\
-    }
-#endif
-
-
 ''' % (module.upper(), module.upper(), module)
 
   for c in cppHeader.classes:
@@ -1533,26 +1541,42 @@ def GenCallbackFuncs():
     types = hashTab[key]
     paraTypes = types["paraTypes"]
     rtnType = GetNoQualifierType(types["rtnType"]["type"])
+    types["rtnType"]["array"] = 0
+
+    if GetIdenticalType(paraTypes[0]["type"]) == "void" \
+      and paraTypes[0]["pointer"] == 0:
+      paraTypes = {}
 
     s += \
 '''
 %s cbFunc%d(%s) {
+    HandleScope scope;
     const unsigned argc = %d;
-    Local<Value> argv[argc] = { %s };
+    Local<Value> argv[argc];
 
 '''%(rtnType, key, GenFPArgsList(paraTypes), \
-    len(paraTypes), GenFPArgsV8Value(paraTypes))
+    len(paraTypes))
 
+    for idx, paraT in enumerate(paraTypes):
+      if paraT["type"] == "void":
+        continue
+      paraT["array"] = 0
+      s += AddIndent(GenFuncReturn(paraT, idx, "arg%d"%idx, "argv[%s]" %idx, False), 4)
     if rtnType == "void":
       s += \
-'''    cbArray[%d]->Call(Context::GetCurrent()->Global(), argc, argv);
+'''
+    cbArray[%d]->Call(Context::GetCurrent()->Global(), argc, argv);
 
     return;'''%(key)
     else:
       s += \
-'''    Local<Value> ret = cbArray[%d]->Call(Context::GetCurrent()->Global(), argc, argv);
+'''
+    Local<Value> ret = cbArray[%d]->Call(Context::GetCurrent()->Global(), argc, argv);
 
-    return %s;''' %(key, GetCValue("ret", GetIdenticalType(rtnType)))
+%s
+    return retC;
+''' %(key, \
+      AddIndent(GenArgTrans(types["rtnType"], "", "retC", "ret", "retV8", True), 4))
 
     s += \
 '''
@@ -1645,6 +1669,7 @@ def GenCallback():
   s += \
 '''#include "%s"
 #include <map>
+#include "stdlib.h"
 
 Persistent<Function> cbArray[%d];
 
@@ -1675,6 +1700,21 @@ Persistent<Object> JSObj;
 #include <v8.h>
 
 using namespace v8;
+
+#ifndef V8_EXCEPTION
+#define V8_EXCEPTION(info) { \\
+    v8::ThrowException(Exception::Error(v8::String::New(info))); \\
+    }
+#endif
+
+#ifndef V8_ASSERT
+#define V8_ASSERT(cond, ...) \\
+    if(!(cond)) {  \\
+        char buffer[512]; \\
+        sprintf(buffer, __VA_ARGS__); \\
+        V8_EXCEPTION(buffer); \\
+    }
+#endif
 
 ''' % (m, m)
   s += \
@@ -1805,7 +1845,7 @@ def DumpFileSummary():
   s += fmt % ("h", totalH)
   s += fmt % ("gyp", GYP_PATH + GYP_FILE)
   s += "================================\n"
-  
+
   printLog(s)
 
 def DumpSummary():
@@ -1815,8 +1855,70 @@ def DumpSummary():
 def GenGyp():
   f = GYP_PATH + GYP_FILE
   fp = open(f, "w")
-  fp.write(BuildGyp())
+  if AUTOGEN_TEST == 1:
+    fp.write(BuildTestGyp())
+  else:
+    fp.write(BuildGyp())
   fp.close()
+
+def BuildTestGyp():
+  testSrcDir = "../../utils/autogen/"
+  files = ""
+  for p in INPUT_DECL_PATHS:
+    if os.path.isfile(p):
+      split = p.rsplit('.', 1)
+      if (split[1] == 'cpp') or (split[1] == 'c') or (split[1] == 'cxx'):
+        root = os.path.dirname(p)
+        files += "'" + testSrcDir + root + "/" + p + "',\n"
+    else:
+      for root, dirs, fs in os.walk(p):
+        for f in fs:
+          split = f.rsplit('.', 1)
+          if (split[1] == 'cpp') or (split[1] == 'c') or (split[1] == 'cxx'):
+            files += "'" + testSrcDir + root + "/" + f + "',\n"
+
+  for idx in summary:
+    item = summary[idx]
+    for f in item["cpp"]:
+      files += "'" + GYP_SRC_PATH + f + "',\n"
+
+  files += "'" + GYP_SRC_PATH + EXPORT_CPP + "',\n"
+  files += "'" + GYP_SRC_PATH + GLOBAL_CPP + "'\n"
+  files = AddIndent(files, 6)
+
+  inc = ""
+  for p in INPUT_DECL_PATHS:
+    if os.path.isfile(p):
+      inc += "'" + os.path.dirname(idx) + "',\n"
+    else:
+      for root, dirs, fs in os.walk(p):
+        inc += "'" + testSrcDir + root + "',\n"
+
+  inc = AddIndent(inc, 6)
+
+  gypContent = GetGypComment("ext.gypi")
+  gypContent += \
+'''
+
+#skeleton of node-gyp file
+
+{
+  'targets' : [{
+
+    'target_name' : '%s',
+
+    'sources' : [
+%s
+    ],
+
+    'include_dirs' : [
+      '%s',
+%s
+    ],
+  }]
+}
+''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc)
+  return gypContent
 
 def BuildGyp():
 
@@ -1879,7 +1981,11 @@ def GenGlobalClassVarJsExport():
 
   methodNames = []
   s = \
-'''var IO = require('bindings')('galileo.node')
+'''var Board = require('bindings')('galileo.node');
+
+module.exports = function(options) {
+  var self = this;
+  Board.IO.call(self, options);
 '''
 
   for idx in summary:
@@ -1893,11 +1999,11 @@ def GenGlobalClassVarJsExport():
         funcNameV8 = GetGlobalClassVarV8GetterFuncName(var)
         s += \
 '''
-IO.%s = function() {
-  var tmp = new IO.%s("%s");
-  tmp.%s();
-  return tmp;
-}
+  self.%s = function() {
+    var tmp = new self.%s("%s");
+    tmp.%s();
+    return tmp;
+  }
 ''' %(funcNameJS, \
       varType, INSTANCE_V8CLASS_ARG, \
       funcNameV8);
@@ -1909,16 +2015,16 @@ IO.%s = function() {
         funcNameV8 = GetGlobalClassVarV8SetterFuncName(var)
         s += \
 '''
-IO.%s = function(value) {
-  value.%s();
-}
+  self.%s = function(value) {
+    value.%s();
+  }
 ''' % (funcNameJS, funcNameV8)
         methodNames.append("%s" %(funcNameJS))
       else:
         raise("Unexpected function %s\n", funcName)
 
   s += '''
-module.exports = IO;
+}
 '''
 
   fp.write(s)

@@ -45,15 +45,20 @@ reString = re.compile('\".*\"|\'.*\'', re.M and re.S)
 C2V8 = { \
   "int": ["Int32", "ToInt32", "IntegerValue", "int", "IsInt32"], \
   "unsigned int": ["Uint32", "ToUint32", "Uint32Value", "unsigned int", "IsUint32" ], \
+  "long": ["Number", "ToNumber", "NumberValue", "long", "IsNumber" ], \
+  "long long": ["Number", "ToNumber", "NumberValue", "long long", "IsNumber" ], \
   "float": ["Number", "ToNumber", "NumberValue", "float", "IsNumber"], \
+  "double": ["Number", "ToNumber", "NumberValue", "double", "IsNumber"], \
   "bool" : ["Boolean", "ToBoolean", "BooleanValue", "bool", "IsBoolean"], \
 #  "char*": ["v8::String", "ToString", "", "char*", "IsString"] \
 }
 
 #link other types
 C2V8["char"] = C2V8["int"]
+C2V8["short"] = C2V8["int"]
 C2V8["byte"] = C2V8["int"]
-C2V8["long"] = C2V8["int"]
+C2V8["unsigned long"] = C2V8["long"]
+C2V8["unsigned long long"] = C2V8["long long"]
 C2V8["boolean"] = C2V8["bool"]
 
 C2V8["size_t"] = C2V8["unsigned int"]
@@ -227,10 +232,13 @@ def CheckStructArgSanity(arg):
 
 # check sanity of function pointer
 def CheckFPArgSanity(arg):
-  if not CheckCommonArgSanity(arg["function_pointer"]["rtnType"]["type"]):
+  # only transform simple func pointer
+  if not CheckCommonArgSanity(arg["function_pointer"]["rtnType"]["type"]) \
+    and not CheckArrayArgSanity(arg["function_pointer"]["rtnType"]) :
     return False
   for argT in arg["function_pointer"]["paraTypes"]:
-    if not CheckCommonArgSanity(argT["type"]):  # only transform simple func pointer
+    if not CheckCommonArgSanity(argT["type"]) \
+      and not CheckArrayArgSanity(argT):
       return False
   return True
 
@@ -244,6 +252,8 @@ def CheckArgSanity(arg, convertFP, convertClass):
     argIsPointer = arg["pointer"]
 
   if (argIsArray + argIsPointer > 1): # only handle one level pointer
+    printDbg("arg type: %s (%d level pointer) can't transfer to V8" \
+           %(arg["type"], argIsArray + argIsPointer))
     return False
 
   argBasicType = GetNoQualifierType(GetBasicType(arg))
@@ -444,14 +454,10 @@ def ParseFuncRtnType(func):
   func["rtnType"] = {
     "type" : rtnType, \
     "pointer": rtnType.count("*"), \
+    "array": 0, \
 #TODO: parse function pointer
     "function_pointer": {} \
   }
-  if (rtnType.count("[") >= 1) and \
-     (rtnType.count("[") == rtnType.count("]")):
-    func["rtnType"]["array"] = 1
-  else:
-    func["rtnType"]["array"] = 0
 
 def ParseFuncPoint(cppHeader):
   for c in cppHeader.classes:

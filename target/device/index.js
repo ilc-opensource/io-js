@@ -16,7 +16,7 @@ var IO = function(config) {
     throw "only support native mode, don't set emu/fake/rpc";
 
 
-  Board.IO.call(self, config);
+  Board.call(self, config);
 
   // initializee ttys, it will effect serial.write/read
   var ttys = [];
