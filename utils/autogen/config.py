@@ -3,6 +3,14 @@ INPUT_DECL_PATHS  = [
 #   "../../../pia-sdk-repo/iolib/arduino/arduiPIA.h"
 ]
 
+AUTOGEN_TEST = 1
+
+if AUTOGEN_TEST == 1:
+  INPUT_DECL_PATHS  = [
+    "./testSuite/"
+  ]
+
+
 VERSION              = '0.0.1'
 TARGET               = 'galileo'
 OUTPUT_COMP_PATH     = '../../target/companion/lib/board/'
