@@ -24,7 +24,8 @@
 
   "scripts" : {
     "preinstall" : "(make configure || true)",
-    "install" : "(make rebuild || true)"
+    "install" : "(make rebuild || true)",
+    "test" : "sh test_autogen.sh"
   }
 }
 

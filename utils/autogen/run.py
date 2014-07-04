@@ -69,8 +69,15 @@ def HandleHeader(f):
   UnsetPrintModule()
 
 if __name__ == "__main__":
+  for opt in sys.argv:
+    if opt.lower() == "autogen_test":
+      config.INPUT_DECL_PATHS  = [
+        "./testSuite/"
+      ]
+      config.AUTOGEN_TEST = 1
+      break
 
-  for p in INPUT_DECL_PATHS:
+  for p in config.INPUT_DECL_PATHS:
     if os.path.isfile(p):
       root = os.path.dirname(p)
       f = os.path.basename(p)

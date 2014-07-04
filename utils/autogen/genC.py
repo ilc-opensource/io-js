@@ -1,6 +1,6 @@
 import os
 import globalVar
-from config import *
+import config
 from util import *
 
 def GetV8ClassName(className):
@@ -1856,7 +1856,7 @@ def DumpSummary():
 def GenGyp():
   f = GYP_PATH + GYP_FILE
   fp = open(f, "w")
-  if AUTOGEN_TEST == 1:
+  if config.AUTOGEN_TEST == 1:
     fp.write(BuildTestGyp())
   else:
     fp.write(BuildGyp())
@@ -1865,7 +1865,7 @@ def GenGyp():
 def BuildTestGyp():
   testSrcDir = "../../utils/autogen/"
   files = ""
-  for p in INPUT_DECL_PATHS:
+  for p in config.INPUT_DECL_PATHS:
     if os.path.isfile(p):
       split = p.rsplit('.', 1)
       if (split[1] == 'cpp') or (split[1] == 'c') or (split[1] == 'cxx'):
@@ -1888,7 +1888,7 @@ def BuildTestGyp():
   files = AddIndent(files, 6)
 
   inc = ""
-  for p in INPUT_DECL_PATHS:
+  for p in config.INPUT_DECL_PATHS:
     if os.path.isfile(p):
       inc += "'" + os.path.dirname(idx) + "',\n"
     else:
@@ -1936,7 +1936,7 @@ def BuildGyp():
   files = AddIndent(files, 6)
 
   inc = ""
-  for idx in INPUT_DECL_PATHS:
+  for idx in config.INPUT_DECL_PATHS:
     if os.path.isfile(idx):
       inc += "'" + os.path.dirname(idx) + "',\n"
     else:

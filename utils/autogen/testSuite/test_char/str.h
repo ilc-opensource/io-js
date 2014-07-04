@@ -1,4 +1,5 @@
 extern char a[5];
 extern char *p;
-char *changeStr(char *);
-char *copyCharArray(char *);
+extern const char *pc;
+const char *changeStr(char *);
+const char *copyCharArray(char *);

@@ -53,5 +53,9 @@ exports.testCharArrayPointer = function() {
   if (pa != "Me")
     throw Error("Failed!!!");
 
+  pc = io.getPcV8()
+  if (pc != "Done")
+    throw Error("Failed!!!");
+
   console.log("Test char array/pointer Passed!!!");
 }

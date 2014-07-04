@@ -3,12 +3,14 @@ char a[5];
 
 char *p = a;
 
-char *changeStr(char *str) {
+const char* pc = "Done";
+
+const char *changeStr(char *str) {
   str[1] = str[1] + 1;
-  return "Done";
+  return pc;
 }
 
-char *copyCharArray(char str[]) {
+const char *copyCharArray(char str[]) {
   strcpy(a, str);
-  return "Done";
+  return pc;
 }
