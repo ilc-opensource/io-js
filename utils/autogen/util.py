@@ -93,14 +93,18 @@ def GetNoQualifierType(t):
   t = t.replace("const ", "")
   t = t.replace("extern ", "")
   t = t.replace("auto ", "")
+  t = t.replace("inline ", "")
   return t
 
 def GetIdenticalType(t):
   t = GetNoQualifierType(t)
-  t = t.replace("inline ", "")
 
   if t.find('''*''') == -1 and t.find('''&''') == -1:
-    if t.find("unsigned") != -1 or t.find("uint") != -1 or t.find("__u") != -1:
+    if t.find("long long") != -1:
+      t = "long long"
+    elif t.find("long") != -1:
+      t = "long"
+    elif t.find("unsigned") != -1 or t.find("uint") != -1 or t.find("__u") != -1:
       t = "unsigned int"
     elif t.find("signed") != -1 or t.find("int") != -1 or t.find("__s") != -1:
       t = "int"
@@ -134,7 +138,7 @@ def GetCValue(value, t):
 
 def GetV8Value(value, t):
   t = GetIdenticalType(t);
-  return "%s::New((%s)%s)" % (C2V8[t][0], C2V8[t][3], value)
+  return "%s::New(%s)" % (C2V8[t][0], value)
 
 def GetV8TypeCheck(t):
   t = GetIdenticalType(t);

@@ -1047,7 +1047,8 @@ def GenMethodCall(func, className):
   if re.match(r"operator.*", func["name"]):
     return '''// TODO: operator %s override call''' %(func["name"][8:])
 
-  sRetType = GetIdenticalType(func["rtnType"]["type"])
+  sRetType = GetNoQualifierType(func["rtnType"]["type"])
+  sRetIdType = GetIdenticalType(func["rtnType"]["type"])
   sRetBasicType = GetBasicType(func["rtnType"])
   if className == "":
     objStr = ""
@@ -1065,7 +1066,7 @@ def GenMethodCall(func, className):
 '''
 // Call C++ function'''
 
-  if sRetType == "" or sRetType == "void":
+  if sRetIdType == "" or sRetIdType == "void":
     s += \
 '''
 %s%s;
@@ -1081,7 +1082,7 @@ return scope.Close(Undefined());
     retNameV8 = retName + "V8"
 
     # handle return type "void *" as "int *"
-    if sRetType == "void *":
+    if sRetIdType == "void *":
       sRetType = "int *"
 
     s += \
@@ -1974,6 +1975,29 @@ def BuildGyp():
 ''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc)
   return gypContent
 
+def GetJsDocType(var):
+  varBasicType = GetBasicType(var)
+  if IsStructArg(varBasicType) or IsClassArg(varBasicType):
+    JsDocType = "Object"
+  elif IsEnumArg(varBasicType):
+    JsDocType = "Integer"
+  elif (var["pointer"] == 1 or var["array"] == 1):
+    if (GetIdenticalType(var["type"]) == "char*" \
+      or (GetIdenticalType(var["type"]) == "char" and var["array"] == 1)):
+      JsDocType = "Array|String|Object"
+    else:
+      JsDocType = "Array"
+  else:
+    varType = GetIdenticalType(var["type"])
+    if (varType == "unsigned int") or (varType == "int") or (varType == "char") \
+      or (varType == "short") or (varType == "long long") or (varType == "long"):
+      JsDocType = "Integer"
+
+    if (varType == "double") or (varType == "float"):
+      JsDocType = "Float pointer"
+
+  return JsDocType
+
 def GenGlobalClassVarJsExport():
   global summary
   f = GYP_PATH + Global_CLASS_VAR_FILE
@@ -1999,12 +2023,20 @@ module.exports = function(options) {
         funcNameV8 = GetGlobalClassVarV8GetterFuncName(var)
         s += \
 '''
+  /**
+   @function IO#%s
+   @type Function
+   @returns global variable '%s' value
+   @instance
+   */
   self.%s = function() {
     var tmp = new self.%s("%s");
     tmp.%s();
     return tmp;
   }
 ''' %(funcNameJS, \
+      var["name"], \
+      funcNameJS, \
       varType, INSTANCE_V8CLASS_ARG, \
       funcNameV8);
 
@@ -2013,12 +2045,23 @@ module.exports = function(options) {
       elif re.match("^Set", funcName):
         funcNameJS = GetGlobalClassVarJSSetterFuncName(var)
         funcNameV8 = GetGlobalClassVarV8SetterFuncName(var)
+
         s += \
 '''
+  /**
+   @function IO#%s
+   @type Function
+   @param {%s} value - value
+   @desc Set global variable '%s' value
+   @instance
+   */
   self.%s = function(value) {
     value.%s();
   }
-''' % (funcNameJS, funcNameV8)
+''' %(funcNameJS, \
+      GetJsDocType(var), \
+      var["name"], \
+      funcNameJS, funcNameV8)
         methodNames.append("%s" %(funcNameJS))
       else:
         raise("Unexpected function %s\n", funcName)
