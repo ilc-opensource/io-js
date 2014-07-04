@@ -1,4 +1,8 @@
 console.log("Test Autogen Start!!!")
+
+var t = require("./test_common/common");
+t.testCommon()
+
 var te = require("./test_enum/enum");
 te.testEnum()
 

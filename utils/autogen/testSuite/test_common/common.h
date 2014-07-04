@@ -1,0 +1,27 @@
+extern double funcd(float, double);
+extern float funcf(double);
+extern unsigned long long funcull(unsigned long, long long);
+extern long long funcll(unsigned long long, long long);
+extern unsigned long funcul(unsigned long long, long);
+extern long funcl(unsigned long long, long);
+extern unsigned int funcui(unsigned int, unsigned short);
+extern unsigned funcu(unsigned, unsigned short);
+extern int funci(int, unsigned int);
+extern unsigned short funcus(short);
+extern short funcs(unsigned short);
+extern unsigned char funcuc(unsigned int, unsigned char);
+extern char funcc(int, char);
+
+extern char gc;
+extern unsigned char guc;
+extern int gi;
+extern unsigned int gui;
+extern unsigned gu;
+extern short gs;
+extern unsigned short gus;
+extern long gl;
+extern unsigned long gul;
+extern long long gll;
+extern unsigned long long gull;
+extern float gf;
+extern double gd;
