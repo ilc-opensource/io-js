@@ -1,1 +1,1 @@
-node ../target/server/index.js
+node ../target/server/index.js $*
