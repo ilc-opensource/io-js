@@ -1,10 +1,20 @@
 # !/bin/bash
 home_dir=`pwd`
-echo $home_dir
+
 cd $home_dir/utils/autogen
 python run.py autogen_test
+
+if [ $? -ne 0 ]; then
+  exit 1
+fi
+
 cd $home_dir/target/device/
 node-gyp configure build
+
+if [ $? -ne 0 ]; then
+  exit 1
+fi
+
 cd $home_dir/utils/autogen/testSuite
 node test_autogen.js
 
