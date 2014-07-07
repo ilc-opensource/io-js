@@ -142,6 +142,23 @@
   };
 
 
+  Submit.prototype.rpc = function(args, funcName) {
+
+    args = utils.toArray(args);
+    var callback = getCallback(args);
+    var ret = undefined;
+    
+    if(funcName !== undefined) {
+      args.unshift(funcName);
+    }
+
+    utils.log('rpc: ' + JSON.stringify(args));
+   
+    jayClient.request('rpc', args, function(error,response) {
+      ret = response;
+      callback(error, response);
+    });
+  };
 /*
   Submit.prototype.funcReq = function(funcName, args) {
     args = utils.toArray(args);

@@ -126,6 +126,21 @@ var handleRequest = {
     } else {
       callback(null, ctx);
     }
+  },
+
+  'rpc' : function(extraMap, args) {
+    args = toArray(args);
+    var callback = args.pop();
+    var funcName = args.shift();
+    utils.log(funcName + '(' + JSON.stringify(args) + ')');
+   
+    var ret;
+    if(!extraMap[funcName]) 
+      callback(utils.genErr(funcName, 'no such function', null));
+
+    ret = extraMap[funcName].apply(undefined, args);
+ 
+    callback(null, ret);
   }, 
 
 };

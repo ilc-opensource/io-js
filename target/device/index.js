@@ -32,6 +32,20 @@ var IO = function(config) {
     self.initWithTty.apply(self, ttys);
   }
 
+  var unsupport = function() {
+    console.log('Unsupport function ');
+  };
+
+  self.offload = unsupport;
+  self.offloadClear = unsupport;
+  self.offloadQuery = unsupport;
+  self.rpc = unsupport;
+  self.addRpc = function(funcName) {
+    self[funcName] = function() {
+      console.log('Unsupport ' + funcName);
+    }
+  };
+
 };
 
 // Merge high level APIs into this interface

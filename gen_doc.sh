@@ -1,3 +1,7 @@
+#Install:
+#  npm install jsdoc
+#  git clone https://github.com/davidshimjs/jaguarjs-jsdoc
+
 DOC=./doc
 rm -rf $DOC
 mkdir $DOC

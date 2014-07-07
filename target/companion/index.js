@@ -1,4 +1,3 @@
-
 (function(exports, global) {
 
 /**
@@ -64,10 +63,22 @@ exports.IO =  function(config) {
   // add special interfaces for rpc  
   if(config.rpc) {
 
+    /**
+     @function IO.offload
+     @type Function
+     @param {Function} func - the function will be offloaded to remote
+     @param {Object} config - configuration
+     @param {Function} callback - the callback function for return value
+     @desc offload a function to remote server. 
+     */
     self.offload = function(func, config, callback) {
       self.submit.offloadReq(func, config, callback);
     };
 
+    /**
+     @function IO.offloadClear
+     @desc clear all of offloaded function
+     */
     self.offloadClear = function() {
       var callback = undefined;
       var config = null;
@@ -86,6 +97,12 @@ exports.IO =  function(config) {
       self.submit.offloadClear(config, callback);
     };
 
+    /**
+     @function IO.offloadQuery
+     @desc query the data saved in the remote context
+     @param {Object} options - configuration
+     @param {Function} [callback] - callback functions for queried value
+     */
     self.offloadQuery = function() {
       var callback = undefined;
       var config = null;
@@ -101,6 +118,41 @@ exports.IO =  function(config) {
         callback = arguments[1];
       }
       self.submit.offloadQuery(config, callback);
+    };
+
+    /**
+     @function IO.addRpc
+     @desc add extra customized RPC function
+     @param {String} funcName - function name
+     */
+    self.addRpc = function(funcName) {
+      self[funcName] = function(){
+        self.submit.rpc(arguments, funcName);
+      };
+    };
+
+    /**
+     @function IO.rpc
+     @desc call customized RPC function
+     @param {String} funcName - function name
+     @param {...*} arg - function arguments
+     */
+    self.rpc = function() {
+      self.submit.rpc(arguments);
+    };
+  } else {
+    var unsupport = function() {
+      console.log('Unsupport function ');
+    };
+
+    self.offload = unsupport;
+    self.offloadClear = unsupport;
+    self.offloadQuery = unsupport;
+    self.rpc = unsupport;
+    self.addRpc = function(funcName) {
+      self[funcName] = function() {
+        console.log('Unsupport ' + funcName);
+      }
     };
 
   }

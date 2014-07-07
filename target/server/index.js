@@ -2,6 +2,9 @@ var jayson  = require('../../lib/jayson');
 var Board   = require(__dirname + '/lib/board/galileo.js');
 var handle  = require(__dirname + '/lib/handleRpc.js');
 var IOLIB   = require(__dirname + '/../');
+var fs      = require('fs');
+
+isRpcServer = true;
 
 var io  = new IOLIB.IO({
   emu: true,
@@ -24,6 +27,39 @@ board.map['offloadClear'] = function() {
 
 board.map['offloadQuery'] = function() {
   board.handle.offloadQuery(arguments);
+};
+
+board.extraMap = {};
+
+if(process.argv.length > 2) {
+  for(var idx = 2; idx < process.argv.length; idx++) {
+    var f = process.argv[idx];
+    var rel = process.cwd() + '/' + f;
+   
+    if(fs.existsSync(rel)) {
+      f = rel;
+    } else if(fs.existsSync(f)) {
+    } else {
+      console.log('discard ' + f);
+      continue;
+    }
+
+    console.log('=> ' + f); 
+    var extra = require(f);
+    if(!extra.RPC){
+      console.log('  no rpc functions');
+      continue;
+    }
+
+    for(var m in extra.RPC) {
+      console.log('  + ' + m);
+      board.extraMap[m] = extra.RPC[m];
+    }
+  }
+}
+
+board.map['rpc'] = function() {
+  board.handle.rpc(board.extraMap, arguments);
 };
  
 var server = jayson.server(board.map);
