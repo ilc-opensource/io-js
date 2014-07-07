@@ -979,6 +979,7 @@ class _CppEnum(dict):
         """
         t = int; i = 0
         names = [ v['name'] for v in values ]
+        val_next = 0
         for v in values:
             if 'value' in v:
                 a = v['value'].strip()
@@ -1006,7 +1007,10 @@ class _CppEnum(dict):
                 if v['value'] != str(a):
                     v['raw_value'] = v['value']
                 v['value'] = a
-            else: v['value'] = i
+                val_next = int(a) + 1
+            else:
+                v['value'] = val_next
+                val_next = val_next + 1
             try:
                 v['value'] = v['value'].replace(" < < ", " << ").replace(" >> ", " >> ")
             except: pass
