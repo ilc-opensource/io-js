@@ -5,4 +5,4 @@ extern struct ss funcss(struct ss*a);
 
 extern struct ss sg;
 extern struct_t st;
-extern struct_t *stp;
+extern struct_t stp[2];

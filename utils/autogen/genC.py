@@ -146,12 +146,29 @@ def GenFuncPointArgDef(arg, idx, argCName):
     raise "GenFuncPointArgDef: unexpected arg type."
 
 def GenLoopCnt(idx):
-  return "index%s" %(idx)
+  return "idx%s" %(idx)
 
 def GenArrayLen(idx):
   return "len%s" %(idx)
 
-def GenStringArgReturn(arg, idx, argCName, argV8Name, argMiddleName):
+def GenArgRetLoopCnt(idx):
+  return "idx%s_r" %(idx)
+
+def GenArgRetArrayLen(idx):
+  return "len%s_r" %(idx)
+
+def GenRetLoopCnt(idx):
+  return "retIdx%s" %(idx)
+
+def GenRetArrayLen(idx):
+  return "retLen%s" %(idx)
+
+def TranArgV8Name(v8Name):
+  newV8Name = re.sub(r'\[', '', v8Name)
+  newV8Name = re.sub(r'\]', '', newV8Name)
+  return newV8Name
+
+def GenStringArgReturn(arg, idx, argCName, argV8Name):
   s = ""
   argType = arg["type"]
   argBasicType = GetBasicType(arg)
@@ -159,41 +176,51 @@ def GenStringArgReturn(arg, idx, argCName, argV8Name, argMiddleName):
   argUniqType = "char *"
   argUniqBasicType = "char"
 
-  loopcnt = GenLoopCnt(idx)
-  arrayLen = GenArrayLen(idx)
+  loopcnt = GenArgRetLoopCnt(idx)
+  arrayLen = GenArgRetArrayLen(idx)
+
+  argMiddleName = TranArgV8Name(argV8Name) + "_ar"
+  elementCName = "%s[%s]"%(argCName, loopcnt)
 
   s = \
 '''
+int %s;
+int %s;
 if (%s->IsString()) {
     v8::String::AsciiValue %s(%s->ToString());
     const char *oldStr = *%s;
+    %s = strlen(*%s) + 1;
+
     for (%s = 0; %s < %s; %s++) {
-        if (oldStr[%s] != %s[%s])
+        if (oldStr[%s] != %s)
             V8_ASSERT(false, "String %s is Changed in C function, \\
                       Please Use Buffer or Integer Array to map 'char *' in JS");
     }
 } else {
     Local<Array> %s = Local<Array>::Cast(%s);
+    %s = %s->Length() + 1;
     for (%s = 0; %s < %s; %s++) {
         %s->Set(%s, %s);
     }
-}
-'''%( \
+}'''%( \
+    loopcnt, \
+    arrayLen, \
     argV8Name, \
     argMiddleName, argV8Name, \
     argMiddleName, \
-
+    arrayLen, argMiddleName, \
     loopcnt, loopcnt, arrayLen, loopcnt, \
-    loopcnt, argCName, loopcnt, \
+    loopcnt, elementCName, \
     argCName, \
 #else
     argMiddleName, argV8Name,\
+    arrayLen, argMiddleName, \
     loopcnt, loopcnt, arrayLen, loopcnt, \
-    argMiddleName, loopcnt, GetV8Value("%s[%s]" %(argCName, loopcnt), argUniqBasicType))
+    argMiddleName, loopcnt, GetV8Value("%s" %(elementCName), argUniqBasicType))
 
   return s
 
-def GenArrayArgReturn(arg, idx, argCName, argMiddleName):
+def GenArrayArgReturn(arg, idx, argCName, argV8Name):
   s = ""
 
   argType = arg["type"]
@@ -206,34 +233,50 @@ def GenArrayArgReturn(arg, idx, argCName, argMiddleName):
   if argUniqBasicType == "void":
     argUniqBasicType = "int"
 
-  loopcnt = GenLoopCnt(idx)
+  loopcnt = GenArgRetLoopCnt(idx)
+  arrayLen = GenArgRetArrayLen(idx)
+
+  argMiddleName = TranArgV8Name(argV8Name) + "_rt"
+  elementCName = "%s[%s]" %(argCName, loopcnt)
+  elementV8Name = TranArgV8Name(argV8Name) + "_ar"
+
   s += \
-'''for (%s = 0; %s < %s; %s ++)
-  %s->Set(%s, %s);
-'''%(loopcnt, loopcnt, GenArrayLen(idx), loopcnt, \
-   argMiddleName, loopcnt, GetV8Value("%s[%s]" %(argCName, loopcnt), argUniqBasicType))
+'''
+int %s;
+Local<Array> %s = Local<Array>::Cast(%s);
+int %s = %s->Length();
+for (%s = 0; %s < %s; %s ++) {''' \
+  %(loopcnt, \
+    argMiddleName, argV8Name, \
+    arrayLen, argMiddleName, \
+    loopcnt, loopcnt, GenArgRetArrayLen(idx), loopcnt)
+
+  if IsStructArg(argUniqBasicType):
+    s += \
+'''
+    Local<Value> %s = %s->Get(%s);
+%s
+    %s->Set(%s, %s);
+}'''%(elementV8Name, argMiddleName, loopcnt, \
+     AddIndent(GenStructArgReturn(argUniqBasicType, idx, \
+         elementCName, elementV8Name), 4), \
+    argMiddleName, loopcnt, elementV8Name)
+  else:
+    s += \
+'''
+    %s->Set(%s, %s);
+}'''% (argMiddleName, loopcnt, GetV8Value(elementCName, argUniqBasicType))
   return s
 
-def GenStructArgReturn(arg, idx, argCName, argV8Name, argMiddleName):
+def GenStructArgReturn(argType, idx, argCName, argV8Name):
   s = ""
 
-  if (arg["function_pointer"] != {} and \
-      arg["function_pointer"] != 0) :
+  argType = GetNoQualifierType(argType)
+
+  if (not IsStructArg(argType)):
     return s
 
-  argType = GetNoQualifierType(arg["type"])
-  argBasicType = GetNoQualifierType(GetBasicType(arg))
-
-  if (not IsStructArg(argBasicType)):
-    return s
-
-  if argType == argBasicType:
-    join = "."
-  else:
-    join = "->"
-
-  argStructName = re.sub(r'^struct ', '', argBasicType)
-
+  argStructName = re.sub(r'^struct ', '', argType)
   cls = GetClass(argStructName)
 
   props = cls["properties"]["public"]
@@ -241,29 +284,36 @@ def GenStructArgReturn(arg, idx, argCName, argV8Name, argMiddleName):
     fldName = prop["name"]
     fldType = prop["type"]
     fldBasicType = GetBasicType(prop)
-    if (IsStructArg(fldBasicType)):
-      objName = "%s_%d" %(argMiddleName, idxs)
-      newObjName = objName + "t"
-      s += GenStructArgReturn(prop, "%s%d" %(idx, idxs), \
-             argCName + join + fldName, objName, newObjName)
-    elif (prop["pointer"] == 1 or prop["array"] == 1):
-      objName = "%s_%d" %(argMiddleName, idxs)
-      newObjName = "%s_%dt" %(argMiddleName, idxs)
+    fldCName = "(%s.%s)" %(argCName, fldName)
+    fldV8Name = TranArgV8Name(argV8Name) + "_%s" %(fldName)
+
+    if (prop["pointer"] == 1 or prop["array"] == 1):
+      s += \
+'''
+Local<Value> %s = %s->ToObject()->Get(String::New("%s"));''' \
+% (fldV8Name, argV8Name, fldName)
       if (GetIdenticalType(fldBasicType) == "char"):
-        s += GenStringArgReturn(prop, "%s%d" %(idx, idxs), \
-               argCName + join + fldName, objName, newObjName)
+        s += GenStringArgReturn(prop, "%s_s%d" %(idx, idxs), \
+               fldCName, fldV8Name)
       else:
-        s += GenArrayArgReturn(prop, "%s%d" %(idx, idxs), \
-               argCName + join + fldName, newObjName)
+        s += GenArrayArgReturn(prop, "%s_s%d" %(idx, idxs), \
+               fldCName, fldV8Name)
+    elif (IsStructArg(GetNoQualifierType(fldType))):
+      s += \
+'''
+Local<Value> %s = %s->ToObject()->Get(String::New("%s"));'''\
+% (fldV8Name, argV8Name, fldName)
+      s += GenStructArgReturn(fldType, "%s_s%d" %(idx, idxs), \
+             fldCName, fldV8Name)
     elif (IsEnumArg(fldType)):
-      objName = GetV8Value(argCName + join + fldName, "int")
+      fldV8Name = GetV8Value(fldCName, "int")
     else:
-      objName = GetV8Value(argCName + join + fldName, GetIdenticalType(fldType))
+      fldV8Name = GetV8Value(fldCName, GetIdenticalType(fldType))
 
     s += \
-'''%s->ToObject()->Set(String::New("%s"), %s);
-
-'''% (argV8Name, fldName, objName)
+'''
+%s->ToObject()->Set(String::New("%s"), %s);
+'''% (argV8Name, fldName, fldV8Name)
   return s
 
 def GenArgReturn(idx, arg):
@@ -273,25 +323,16 @@ def GenArgReturn(idx, arg):
   argBasicType = GetBasicType(arg)
   argCName = GenArgName(idx, arg)
   argV8Name = GenArgArrayName(idx)
-  argMiddleName = "argV8_%s" %(idx)
 
-  if (IsStructArg(argBasicType)):
-    s = GenStructArgReturn(arg, idx, argCName, argV8Name, argMiddleName)
-  elif (GetIdenticalType(argBasicType) == "char"):
-    s = GenStringArgReturn(arg, idx, argCName, argV8Name, argMiddleName)
-  elif (IsClassArg(argBasicType)):
+  if (IsClassArg(argBasicType)):
     s = ""
+  elif (GetIdenticalType(argBasicType) == "char"):
+    s = GenStringArgReturn(arg, idx, argCName, argV8Name)
   else:
-    s = GenArrayArgReturn(arg, idx, argCName, argMiddleName)
+    s = GenArrayArgReturn(arg, idx, argCName, argV8Name)
   return s
 
-def GenRetLoopCnt(idx):
-  return "retIdx%s" %(idx)
-
-def GenRetArrayLen(idx):
-  return "retLen%s" %(idx)
-
-def GenArrayReturn(rtn, idx, rtnCName, rtnArrayV8Name, needNewTargName):
+def GenArrayReturn(rtn, idx, rtnCName, rtnV8Name, needNewTargName):
   s = ""
 
   rtnType = rtn["type"]
@@ -305,22 +346,43 @@ def GenArrayReturn(rtn, idx, rtnCName, rtnArrayV8Name, needNewTargName):
 
   loopcnt = GenRetLoopCnt(idx)
   arrayLen = GenRetArrayLen(idx)
-  arrayName = rtnArrayV8Name
+
   if needNewTargName:
     s += "Local<Array> "
-    cast = arrayName
+    cast = rtnV8Name
   else:
-    cast = "Local<Array>::Cast(%s)" %(arrayName)
+    cast = "Local<Array>::Cast(%s)" %(rtnV8Name)
 
   s += \
 '''%s = Array::New();
 int %s;
-for (%s = 0; *(%s + %s) != 0; %s ++)
-    %s->Set(%s, %s);
-'''%(arrayName, \
-    loopcnt,
-    loopcnt, rtnCName, loopcnt, loopcnt, \
-    cast, loopcnt, GetV8Value("%s[%s]" %(rtnCName, loopcnt), rtnUniqBasicType))
+'''%(rtnV8Name, loopcnt)
+
+  if rtn["array"] == 1:
+    s += \
+'''int %s = sizeof(%s) / sizeof(%s);
+for (%s = 0; %s < %s; %s ++) {
+'''%(arrayLen, rtnCName, rtnUniqBasicType, \
+    loopcnt, loopcnt, arrayLen, loopcnt)
+  else: # just return size = 1 for pointer
+    s += \
+'''for (%s = 0; %s < 1; %s ++) {
+'''%(loopcnt, loopcnt, loopcnt)
+
+  newRtnV8Name = TranArgV8Name(rtnV8Name) + "_a"
+  elementCName = "(%s[%s])" %(rtnCName, loopcnt)
+
+  if IsStructArg(rtnUniqBasicType):
+    s += AddIndent(GenStructReturn(rtnUniqBasicType, idx, \
+                         elementCName, newRtnV8Name, True), 4)
+  else:
+    s += AddIndent(GenCommonReturn(rtnUniqBasicType, \
+                         elementCName, newRtnV8Name, True), 4)
+  s += \
+'''%s->Set(%s, %s);
+}
+'''%(cast, loopcnt, newRtnV8Name)
+
   return s
 
 def GenCommonReturn(rtnType, rtnCName, rtnV8Name, needNewTargName):
@@ -334,9 +396,13 @@ def GenCommonReturn(rtnType, rtnCName, rtnV8Name, needNewTargName):
 ''' %(rtnV8Name, GetV8Value(rtnCName, rtnType))
   return s
 
-def GenEnumReturn(rtnCName, rtnV8Name):
-  s = \
-'''Handle<Value> %s = %s;
+def GenEnumReturn(rtnCName, rtnV8Name, needNewTargName):
+  s = ""
+  if needNewTargName:
+    s += "Handle<Value> "
+
+  s += \
+'''%s = %s;
 ''' %(rtnV8Name, GetV8Value(rtnCName, "int"))
   return s
 
@@ -350,33 +416,27 @@ def GenStringReturn(rtn, idx, rtnCName, rtnV8Name, needNewTargName):
 ''' %(rtnV8Name, rtnCName)
   return s
 
-def GenStructReturn(rtn, idx, rtnCName, rtnV8Name):
+def GenStructReturn(rtnType, idx, rtnCName, rtnV8Name, needNewTargName):
   s = ""
+  rtnType = GetIdenticalType(rtnType)
 
-  rtnType = GetIdenticalType(rtn["type"])
-  rtnBasicType = GetIdenticalType(GetBasicType(rtn))
+  if (not IsStructArg(rtnType)):
+    return s
 
-  if (not IsStructArg(rtnBasicType)):
-    return ""
-
-  if rtnType == rtnBasicType:
-    join = "."
-  else:
-    join = "->"
-
-  s += \
+  if needNewTargName:
+    s += \
 '''Local<Object> %s = Object::New();
 ''' % (rtnV8Name)
 
-  rtnStructName = re.sub(r'^struct ', '', rtnBasicType)
+  rtnStructName = re.sub(r'^struct ', '', rtnType)
 
   cls = GetClass(rtnStructName)
   props = cls["properties"]["public"]
   for idxs, prop in enumerate(props):
     fldName = prop["name"]
-    objName = "%s_%d" %(rtnV8Name, idxs)
-    s += GenFuncReturn(prop, "%s%d" %(idx, idxs), \
-           rtnCName + join + fldName, objName, True)
+    objName = "%s_%s" %(rtnV8Name, fldName)
+    s += GenFuncReturn(prop, "%s_%d" %(idx, idxs), \
+           rtnCName + "." + fldName, objName, needNewTargName)
     s += \
 '''%s->Set(String::New("%s"), %s);
 
@@ -384,17 +444,16 @@ def GenStructReturn(rtn, idx, rtnCName, rtnV8Name):
   return s
 
 def GenFuncReturn(rtn, idx, rtnCName, rtnV8Name, needNewTargName):
-  rtnBasicType = GetBasicType(rtn)
   rtnUniqType = GetIdenticalType(rtn["type"])
 
-  if (IsStructArg(rtnBasicType)):
-    s = GenStructReturn(rtn, idx, rtnCName, rtnV8Name)
-  elif (IsEnumArg(rtnUniqType)):
-    s = GenEnumReturn(rtnCName, rtnV8Name)
-  elif (rtnUniqType == "char*") or (rtnUniqType == "char" and rtn["array"] == 1):
+  if (rtnUniqType == "char*") or (rtnUniqType == "char" and rtn["array"] == 1):
     s = GenStringReturn(rtn, idx, rtnCName, rtnV8Name, needNewTargName)
   elif (rtn["pointer"] == 1 or rtn["array"] == 1):
     s = GenArrayReturn(rtn, idx, rtnCName, rtnV8Name, needNewTargName)
+  elif (IsStructArg(rtnUniqType)):
+    s = GenStructReturn(rtn["type"], idx, rtnCName, rtnV8Name, needNewTargName)
+  elif (IsEnumArg(rtnUniqType)):
+    s = GenEnumReturn(rtnCName, rtnV8Name, needNewTargName)
   else:
     s = GenCommonReturn(rtnUniqType, rtnCName, rtnV8Name, needNewTargName)
   return s
@@ -432,7 +491,7 @@ def GenFPArgTran(arg, idx, argCName, argV8Name, needNewTargName):
   globalVar.FuncPointerCnt += 1
   return s
 
-def GenStringArgTran(arg, idx, argCName, argV8Name, argMiddleName, needNewTargName):
+def GenStringArgTran(arg, idx, argCName, argV8Name, needNewTargName):
   s = ""
   argType = arg["type"]
   argBasicType = GetBasicType(arg)
@@ -443,19 +502,21 @@ def GenStringArgTran(arg, idx, argCName, argV8Name, argMiddleName, needNewTargNa
   loopcnt = GenLoopCnt(idx)
   arrayLen = GenArrayLen(idx)
 
+  argMiddleName = TranArgV8Name(argV8Name) + "_at"
+  elementCName = "%s[%s]" %(argCName, loopcnt)
+  elementV8Name = TranArgV8Name(argV8Name) + "_a"
+
   if needNewTargName:
     s = \
 '''%s *%s;''' %(argUniqBasicType, argCName)
     m1 = \
 '''%s = strlen(*%s) + 1;
-%s = (%s)malloc(%s * sizeof(%s));
-''' %(arrayLen, argMiddleName, \
-    argCName, argUniqType, arrayLen, argUniqBasicType)
+%s = new %s[%s];''' \
+  %(arrayLen, argMiddleName, \
+    argCName, argUniqBasicType, arrayLen)
 
     m2 = \
-'''%s = (%s)malloc(%s * sizeof(%s));
-'''%(argCName, argUniqType, arrayLen, argUniqBasicType)
-    globalVar.mallocObj.append(argCName)
+'''%s = new %s[%s];'''%(argCName, argUniqBasicType, arrayLen)
   else:
     s = ""
     m1 = ""
@@ -474,12 +535,13 @@ if (%s->IsString()) {
     %s = %s->Length() + 1;
 %s
     for (%s = 0; %s < %s - 1; %s++) {
-        Local<Value> %s_%s = %s->Get(%s);
-        V8_ASSERT(%s_%s->%s(), "%s[%%d] parameter error", %s);
-        %s[%s] = (%s)%s;
+        Local<Value> %s = %s->Get(%s);
+        V8_ASSERT(!%s->IsNull() && %s->IsInt32(), "%s[%%d] parameter error", %s);
+        %s = (%s)%s->IntegerValue();
     }
-    %s[%s] = 0;
-}'''%( \
+    %s = 0;
+}
+'''%( \
     loopcnt, \
     arrayLen, \
     argV8Name, \
@@ -487,19 +549,18 @@ if (%s->IsString()) {
     AddIndent(m1, 4), \
     argCName, argMiddleName, \
 #else
-    argMiddleName, argV8Name,\
+    argMiddleName, argV8Name, \
     arrayLen, argMiddleName, \
     AddIndent(m2, 4), \
     loopcnt, loopcnt, arrayLen, loopcnt, \
-    argMiddleName, loopcnt, argMiddleName, loopcnt,\
-    argMiddleName, loopcnt, GetV8TypeCheck(argUniqBasicType), argCName, loopcnt, \
-    argCName, loopcnt, GetNoQualifierType(argBasicType), \
-      GetCValue("%s_%s" %(argMiddleName, loopcnt), argUniqBasicType), \
-    argCName, loopcnt)
+    elementV8Name, argMiddleName, loopcnt, \
+    elementV8Name, elementV8Name, argCName, loopcnt, \
+    elementCName, GetNoQualifierType(argBasicType), elementV8Name, \
+    elementCName)
 
   return s
 
-def GenArrayArgTran(arg, idx, argCName, argV8Name, argMiddleName, needNewTargName):
+def GenArrayArgTran(arg, idx, argCName, argV8Name, needNewTargName):
   s = ""
 
   argType = arg["type"]
@@ -520,42 +581,47 @@ def GenArrayArgTran(arg, idx, argCName, argV8Name, argMiddleName, needNewTargNam
   loopcnt = GenLoopCnt(idx)
   arrayLen = GenArrayLen(idx)
 
+  argMiddleName = TranArgV8Name(argV8Name) + "_t"
+  elementCName = "%s[%s]" %(argCName, loopcnt)
+  elementV8Name = TranArgV8Name(argV8Name) + "_a"
+
   if needNewTargName:
     newVarStr = \
-'''%s%s;
-int %s = %s->Length();
-%s = (%s)malloc(%s * sizeof(%s));
-'''%(GetNoQualifierType(argType), argCName, \
-     arrayLen, argMiddleName, \
-     argCName, GetNoQualifierType(argType), \
-     arrayLen, GetNoQualifierType(argBasicType))
-    globalVar.mallocObj.append(argCName)
+'''%s %s[%s];'''%(GetNoQualifierType(argBasicType), argCName, arrayLen)
   else:
-    newVarStr = \
-'''int %s = %s->Length();
-'''%(arrayLen, argMiddleName)
+    newVarStr = ""
+
+  if IsStructArg(argUniqBasicType):
+    elementTran = GenStructArgTran(argUniqBasicType, \
+        idx, elementCName, elementV8Name, False)
+    typeCheck = "IsObject"
+  else:
+    elementTran = GenCommonArgTran(argBasicType, \
+        elementCName, elementV8Name, False)
+    typeCheck = GetV8TypeCheck(argUniqBasicType)
 
   s = \
-'''int %s;
-Local<Array> %s = Local<Array>::Cast(%s);
+'''Local<Array> %s = Local<Array>::Cast(%s);
+int %s = %s->Length();
 %s
+int %s;
 for (%s = 0; %s < %s; %s++) {
-  Local<Value> %s_%s = %s->Get(%s);
-  V8_ASSERT(%s_%s->%s(), "%s[%%d] parameter error", %s);
-  %s[%s] = (%s)%s;
-}'''%(loopcnt, \
-    argMiddleName, argV8Name,\
+    Local<Value> %s = %s->Get(%s);
+    V8_ASSERT(!%s->IsNull() && %s->%s(), "%s[%%d] parameter error", %s);
+%s
+}
+'''%(argMiddleName, argV8Name,\
+    arrayLen, argMiddleName, \
     newVarStr, \
+    loopcnt, \
     loopcnt, loopcnt, arrayLen, loopcnt, \
-    argMiddleName, loopcnt, argMiddleName, loopcnt,\
-    argMiddleName, loopcnt, GetV8TypeCheck(argUniqBasicType), argCName, loopcnt, \
-    argCName, loopcnt, GetNoQualifierType(argBasicType), \
-      GetCValue("%s_%s" %(argMiddleName, loopcnt), argUniqBasicType))
+    elementV8Name, argMiddleName, loopcnt,\
+    elementV8Name, elementV8Name, typeCheck, argCName, loopcnt, \
+    AddIndent(elementTran, 4))
 
   return s
 
-def GenCommonArgTran(arg, idx, argCName, argV8Name, needNewTargName):
-  argType = arg["type"]
+def GenCommonArgTran(argType, argCName, argV8Name, needNewTargName):
   argUniqType = GetIdenticalType(argType)
 
   if needNewTargName:
@@ -568,7 +634,7 @@ def GenCommonArgTran(arg, idx, argCName, argV8Name, needNewTargName):
 '''% (typeStr, argCName, GetNoQualifierType(argType), GetCValue(argV8Name, argUniqType))
   return s
 
-def GenEnumArgTran(arg, idx, argCName, argV8Name, needNewTargName):
+def GenEnumArgTran(arg, argCName, argV8Name, needNewTargName):
   argType = GetIdenticalType(arg["type"])
   argUniqType = "int" # use integer value to map enum value
 
@@ -582,7 +648,7 @@ def GenEnumArgTran(arg, idx, argCName, argV8Name, needNewTargName):
 '''% (typeStr, argCName, argType, GetCValue(argV8Name, argUniqType))
   return s
 
-def GenClassArgTran(arg, idx, argCName, argV8Name, needNewTargName):
+def GenClassArgTran(arg, argCName, argV8Name, needNewTargName):
   argType = GetIdenticalType(arg["type"])
   argBasicType = GetBasicType(arg)
 
@@ -596,72 +662,65 @@ def GenClassArgTran(arg, idx, argCName, argV8Name, needNewTargName):
 '''% (typeStr, argCName, argBasicType, argV8Name)
   return s
 
-def GenStructArgTran(arg, idx, argCName, argV8Name, argMiddleName, needNewTargName):
+def GenStructArgTran(argType, idx, argCName, argV8Name, needNewTargName):
   s = ""
-  argType = GetNoQualifierType(arg["type"])
-  argBasicType = GetNoQualifierType(GetBasicType(arg))
+  argType = GetNoQualifierType(argType)
 
-  if (not IsStructArg(argBasicType)):
+  if (not IsStructArg(argType)):
     return s
 
-  argStructName = re.sub(r'^struct ', '', argBasicType)
+  argStructName = re.sub(r'^struct ', '', argType)
   cls = GetClass(argStructName)
+
+  argMiddleName = TranArgV8Name(argV8Name) + "_st"
+
   props = cls["properties"]["public"]
   for idxs, prop in enumerate(props):
     fldName = prop["name"]
-    objName = "%s_%d" %(argMiddleName, idxs)
-    newObjName = "%s_%dt" %(argMiddleName, idxs)
+    fldCName = TranArgV8Name(argCName) + "_%s" %(fldName)
+    fldV8Name = TranArgV8Name(argV8Name) + "_%s" %(fldName)
     s += \
 '''Local<Value> %s = %s->ToObject()->Get(String::New("%s"));
-V8_ASSERT(%s, "%s.%s parameter error");
-'''% (objName, argV8Name, fldName, \
-      GenArgCheck(prop, objName), argCName, fldName)
+V8_ASSERT(!%s->IsNull() && %s, "%s.%s parameter error");
+'''% (fldV8Name, argV8Name, fldName, \
+      fldV8Name, GenArgCheck(prop, fldV8Name), argCName, fldName)
+
     if (prop["function_pointer"] != 0 and len(prop["function_pointer"]) > 0) :
       s +=""
     else:
-      s += GenArgTrans(prop, "%s%d"%(idx, idxs), "%s%d"%(argCName, idxs),\
-          objName, newObjName, True)
+      s += GenArgTrans(prop, "%s_%d"%(idx, idxs), fldCName, fldV8Name, True)
 
     s += "\n"
 
-  if argType == argBasicType:
-    sName = argCName
-  else:
-    sName = argCName + "T"
-
-  if needNewTargName or argType != argBasicType :
+  if needNewTargName:
     s += \
 '''%s %s;
-''' %(GetNoQualifierType(argBasicType), sName)
+''' %(GetNoQualifierType(argType), argCName)
 
   for idxs, prop in enumerate(props):
     fldName = prop["name"]
-    fieldValue = "%s%d"%(argCName, idxs)
+    fldBasicType = GetNoQualifierType(GetBasicType(prop))
+    fldCName = TranArgV8Name(argCName) + "_%s" %(fldName)
     if (prop["function_pointer"] != 0 and len(prop["function_pointer"]) > 0) :
       s +=""
     else:
-      s += \
+      if prop["pointer"] == 1 or prop["array"] == 1:
+        if prop["pointer"] == 1:
+          s += \
+'''%s.%s = new %s[sizeof(%s)/sizeof(%s[0])];
+''' %(argCName, fldName, fldBasicType, fldCName, fldCName)
+
+        s += \
+'''memcpy(%s.%s, %s, sizeof(%s));
+''' %(argCName, fldName, fldCName, fldCName)
+      else:
+        s += \
 '''%s.%s = %s;
-''' %(sName, fldName, fieldValue)
-
-  if argType != argBasicType:
-    if needNewTargName:
-      typeStr = GetNoQualifierType(argType)
-    else:
-      typeStr = ""
-
-    s += \
-'''%s%s = (%s)malloc(sizeof(%s));
-memcpy(%s, &%s, sizeof(%s));
-''' %(typeStr, argCName, argType, argBasicType, \
-    argCName, sName, argBasicType)
-
-    if needNewTargName:
-      globalVar.mallocObj.append(argCName)
+''' %(argCName, fldName, fldCName)
 
   return s
 
-def GenArgTrans(arg, idx, argCName, argV8Name, argMiddleName, needNewTargName):
+def GenArgTrans(arg, idx, argCName, argV8Name, needNewTargName):
   argType = GetNoQualifierType(arg["type"])
   argBasicType = GetNoQualifierType(GetBasicType(arg))
 
@@ -671,18 +730,18 @@ def GenArgTrans(arg, idx, argCName, argV8Name, argMiddleName, needNewTargName):
   if (arg["function_pointer"] != 0 and len(arg["function_pointer"]) > 0) :
     s = GenFPArgTran(arg, idx, argCName, argV8Name, needNewTargName)
   elif IsClassArg(argBasicType):
-    s = GenClassArgTran(arg, idx, argCName, argV8Name, needNewTargName)
-  elif IsStructArg(argBasicType):
-    s = GenStructArgTran(arg, idx, argCName, argV8Name, argMiddleName, needNewTargName)
+    s = GenClassArgTran(arg, argCName, argV8Name, needNewTargName)
   elif IsEnumArg(argType):
-    s = GenEnumArgTran(arg, idx, argCName, argV8Name, needNewTargName)
+    s = GenEnumArgTran(arg, argCName, argV8Name, needNewTargName)
   elif (arg["pointer"] == 1 or arg["array"] == 1):
     if GetIdenticalType(argBasicType) == "char":
-      s = GenStringArgTran(arg, idx, argCName, argV8Name, argMiddleName, needNewTargName)
+      s = GenStringArgTran(arg, idx, argCName, argV8Name, needNewTargName)
     else:
-      s = GenArrayArgTran(arg, idx, argCName, argV8Name, argMiddleName, needNewTargName)
+      s = GenArrayArgTran(arg, idx, argCName, argV8Name, needNewTargName)
+  elif IsStructArg(argType):
+    s = GenStructArgTran(argType, idx, argCName, argV8Name, needNewTargName)
   else:
-    s = GenCommonArgTran(arg, idx, argCName, argV8Name, needNewTargName)
+    s = GenCommonArgTran(arg["type"], argCName, argV8Name, needNewTargName)
 
   return s
 
@@ -714,9 +773,8 @@ def GenArgsTrans(func):
 
     argCName = GenArgName(idx, arg)
     argV8Name = GenArgArrayName(idx)
-    argMiddleName = "argV8_%d" %(idx)
 
-    s += GenArgTrans(arg, idx, argCName, argV8Name, argMiddleName, True)
+    s += GenArgTrans(arg, idx, argCName, argV8Name, True)
     s += "\n"
 
   return s
@@ -927,7 +985,7 @@ Handle<Value> %s(const v8::Arguments &args) {
 
 '''%(setFuncName, \
      GenArgCheck(var, "args[0]"), varName, \
-     AddIndent(GenArgTrans(var, 0, varName, "args[0]", "argV8_0", False), 4))
+     AddIndent(GenArgTrans(var, 0, varName, "args[0]", False), 4))
 
       thisSummary["succGlobalVar"].append(setFuncName)
 
@@ -1071,11 +1129,9 @@ def GenMethodCall(func, className):
 '''
 %s%s;
 %s
-%s
 return scope.Close(Undefined());
 ''' %(objStr, GenCall(func), \
-    argsReturnStr,
-    FreeMallocObj())
+    argsReturnStr)
 
   else:
     retName = "ret"
@@ -1097,14 +1153,13 @@ return scope.Close(Undefined());
 '''
 // Map C++ Object to V8 Object
 iter = CClassToJsObjMap.find(ret);
-%s
 if (iter != CClassToJsObjMap.end()) {
     return iter->second;
 } else {
     V8_ASSERT(false, "Don't find corresponding JSObj, \\
               Please define it first in JS code");
 }
-'''% (FreeMallocObj())
+'''
 
     else:
 
@@ -1112,18 +1167,10 @@ if (iter != CClassToJsObjMap.end()) {
 '''
 // Convert C++ return value to V8
 %s
-%s
 return scope.Close(%s);
 '''% (GenFuncReturn(func["rtnType"], "", retName, retNameV8, True), \
-      FreeMallocObj(), \
       retNameV8)
 
-  return s
-
-def FreeMallocObj():
-  s = ""
-  for arg in globalVar.mallocObj:
-    s += "free(%s);\n" %(arg)
   return s
 
 def GenOverride(className, func):
@@ -1139,7 +1186,6 @@ def GenOverride(className, func):
   s = GenMethodHead(className, func)
 
   for f in func["funcs"]:
-    globalVar.mallocObj = []
     if not CheckSanity(f):
       thisSummary["failFuncs"].append(head + f["name"])
       printErr("Can't transfer: " + GetFuncDesc(func))
@@ -1175,7 +1221,6 @@ def GenOverride(className, func):
 def GenMethod(className, func):
   global thisSummary
 
-  globalVar.mallocObj = []
   head = className
   if len(className) != 0:
     head += "."
@@ -1577,7 +1622,7 @@ def GenCallbackFuncs():
 %s
     return retC;
 ''' %(key, \
-      AddIndent(GenArgTrans(types["rtnType"], "", "retC", "ret", "retV8", True), 4))
+      AddIndent(GenArgTrans(types["rtnType"], "", "retC", "ret", True), 4))
 
     s += \
 '''
@@ -1975,29 +2020,6 @@ def BuildGyp():
 ''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc)
   return gypContent
 
-def GetJsDocType(var):
-  varBasicType = GetBasicType(var)
-  if IsStructArg(varBasicType) or IsClassArg(varBasicType):
-    JsDocType = "Object"
-  elif IsEnumArg(varBasicType):
-    JsDocType = "Integer"
-  elif (var["pointer"] == 1 or var["array"] == 1):
-    if (GetIdenticalType(var["type"]) == "char*" \
-      or (GetIdenticalType(var["type"]) == "char" and var["array"] == 1)):
-      JsDocType = "Array|String|Object"
-    else:
-      JsDocType = "Array"
-  else:
-    varType = GetIdenticalType(var["type"])
-    if (varType == "unsigned int") or (varType == "int") or (varType == "char") \
-      or (varType == "short") or (varType == "long long") or (varType == "long"):
-      JsDocType = "Integer"
-
-    if (varType == "double") or (varType == "float"):
-      JsDocType = "Float pointer"
-
-  return JsDocType
-
 def GenGlobalClassVarJsExport():
   global summary
   f = GYP_PATH + Global_CLASS_VAR_FILE
@@ -2023,20 +2045,12 @@ module.exports = function(options) {
         funcNameV8 = GetGlobalClassVarV8GetterFuncName(var)
         s += \
 '''
-  /**
-   @function IO#%s
-   @type Function
-   @returns global variable '%s' value
-   @instance
-   */
   self.%s = function() {
     var tmp = new self.%s("%s");
     tmp.%s();
     return tmp;
   }
 ''' %(funcNameJS, \
-      var["name"], \
-      funcNameJS, \
       varType, INSTANCE_V8CLASS_ARG, \
       funcNameV8);
 
@@ -2048,20 +2062,10 @@ module.exports = function(options) {
 
         s += \
 '''
-  /**
-   @function IO#%s
-   @type Function
-   @param {%s} value - value
-   @desc Set global variable '%s' value
-   @instance
-   */
   self.%s = function(value) {
     value.%s();
   }
-''' %(funcNameJS, \
-      GetJsDocType(var), \
-      var["name"], \
-      funcNameJS, funcNameV8)
+''' %(funcNameJS, funcNameV8)
         methodNames.append("%s" %(funcNameJS))
       else:
         raise("Unexpected function %s\n", funcName)

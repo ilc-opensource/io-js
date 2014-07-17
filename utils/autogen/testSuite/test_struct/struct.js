@@ -13,12 +13,12 @@ exports.testStruct = function() {
 
   console.log("Test struct args/ret-value Start!!!");
 
-  s = {
+  s = [{
     ss1: 2,
     e: io.EUC,
     e1: io.EUD1,
     ss2: [2,3,4,5,6,6,7]
-  }
+  }]
 
   obj = {
     a: [10,20,30,40],
@@ -37,18 +37,20 @@ exports.testStruct = function() {
 
   if (obj.a[0] != 10 || !fp_cmp.float_eq(obj.b, 21.36) || obj.e != io.EUA || obj.str[3] !=  97)
     throw Error("Failed!!!");
-  if (obj.st.ss1 != 2 || obj.st.ss2[2] != 4)
+
+  if (obj.st[0].ss1 != 2 || ((obj.st[0]).ss2)[2] != 4)
     throw Error("Failed!!!");
 
   if (ret.a[0] != 789 || !fp_cmp.float_eq(ret.b, 23.45) || ret.e != io.EUC1 || ret.str[3] != 't')
     throw Error("Failed!!!");
-  if (ret.st.ss1 != 18 || ret.st.ss2[2] != 2)
+  if (ret.st[0].ss1 != 18 || ret.st[0].ss2[0] != 2)
     throw Error("Failed!!!");
 
-  ret = io.funcp(b, obj)
-  if (obj.a[0] != 789 || !fp_cmp.float_eq(obj.b, 23.45) || obj.e != io.EUC1 || obj.str[3] != 0x74)
+  objArr = [obj]
+  ret = io.funcp(b, objArr)
+  if (objArr[0].a[0] != 789 || !fp_cmp.float_eq(objArr[0].b, 23.45) || objArr[0].e != io.EUC1 || objArr[0].str[3] != 0x74)
     throw Error("Failed!!!");
-  if (obj.st.ss1 != 18 || obj.st.ss2[2] != 2)
+  if (objArr[0].st[0].ss1 != 18 || objArr[0].st[0].ss2[2] != 2)
     throw Error("Failed!!!");
 
   objs = {
@@ -58,9 +60,11 @@ exports.testStruct = function() {
     ss2: [10,20,30]
   }
 
-  ret = io.funcss(objs)
+  objsArr = [ objs ]
 
-  if ((objs.ss1 != 20) || objs.e != io.EUB || objs.e1 != io.EUC1 || objs.ss2[0] != 10 || objs.ss2[2] != 3)
+  ret = io.funcss(objsArr)
+
+  if ((objsArr[0].ss1 != 20) || objsArr[0].e != io.EUB || objsArr[0].e1 != io.EUC1 || objsArr[0].ss2[0] != 10 || objsArr[0].ss2[2] != 3)
     throw Error("Failed!!!");
 
   if ((ret.ss1 != 20) || ret.e != io.EUB || ret.e1 != io.EUC1 || ret.ss2[0] != 10 || ret.ss2[2] != 3)
@@ -78,40 +82,54 @@ exports.testStruct = function() {
   // Test global variable(struct_t st) getter/setter function
   io.setStV8(obj);
 
-  stpe = io.getStpV8();
-  if (stpe.a[0] != 789 || stpe.a[2] != 30 || !fp_cmp.float_eq(stpe.b, 23.45) || stpe.e != io.EUC1 || stpe.str[3] != 't' || stpe.str[0] != 'n')
-    throw Error("Failed!!!");
-  if (stpe.st.ss1 != 18 || stpe.st.ss2[2] != 2)
-    throw Error("Failed!!!");
-
   ste = io.getStV8();
   if (ste.a[0] != 789 || ste.a[2] != 30 || !fp_cmp.float_eq(ste.b, 23.45) || ste.e != io.EUC1 || ste.str[3] != 't' || ste.str[0] != 'n')
     throw Error("Failed!!!");
-  if (ste.st.ss1 != 18 || ste.st.ss2[2] != 2)
+  if (ste.st[0].ss1 != 18 || ste.st[0].ss2[0] != 2)
     throw Error("Failed!!!");
 
-  // Test global variable(struct_t *stp) getter/setter function
-  s = {
+  // Test global variable(struct_t stp[2]) getter/setter function
+  s0 = {
     ss1: 2,
     e: io.EUC,
     e1: io.EUD1,
     ss2: [2,3,4,5,6,6,7]
   }
 
-  obj = {
+  s1 = {
+    ss1: 22,
+    e: io.EUB,
+    e1: io.EUC1,
+    ss2: [4,5,6,6,7]
+  }
+
+  obj0 = {
     a: [10,20,30,40],
     b: 21.36,
     e: io.EUA,
     str: "nihao",
-    st: s
+    st: [s0]
   }
 
-  io.setStpV8(obj);
+  obj1 = {
+    a: [20,30,40],
+    b: 98.76,
+    e: io.EUB,
+    str: "please",
+    st: [s0, s1]
+  }
+  io.setStpV8([obj0, obj1]);
 
   stpe = io.getStpV8();
-  if (stpe.a[0] != 10 || stpe.a[2] != 30 || !fp_cmp.float_eq(stpe.b, 21.36) || stpe.e != io.EUA || stpe.str[3] != 'a' || stpe.str[0] != 'n')
+
+  if (stpe[0].a[0] != obj0.a[0] || stpe[0].a[2] != obj0.a[2] || !fp_cmp.float_eq(stpe[0].b, obj0.b) || stpe[0].e != obj0.e || stpe[0].str[3] != obj0.str[3] || stpe[0].str[0] != obj0.str[0])
     throw Error("Failed!!!");
-  if (stpe.st.ss1 != 2 || stpe.st.ss2[2] != 4)
+  if (stpe[0].st[0].ss1 != obj0.st[0].ss1 || stpe[0].st[0].ss2[0] != obj0.st[0].ss2[0])
+    throw Error("Failed!!!");
+
+  if (stpe[1].a[0] != obj1.a[0] || stpe[0].a[2] != obj0.a[2] || !fp_cmp.float_eq(stpe[1].b, obj1.b) || stpe[1].e != obj1.e || stpe[1].str[3] != obj1.str[3] || stpe[1].str[0] != obj1.str[0])
+    throw Error("Failed!!!");
+  if (stpe[1].st[0].ss1 != obj1.st[0].ss1 || stpe[1].st[0].ss2[0] != obj1.st[0].ss2[0])
     throw Error("Failed!!!");
 
   console.log("Test global struct variable Passed!!!");

@@ -104,9 +104,9 @@ def GetIdenticalType(t):
       t = "long long"
     elif t.find("long") != -1:
       t = "long"
-    elif t.find("unsigned") != -1 or t.find("uint") != -1 or t.find("__u") != -1:
+    elif t.find("unsigned") != -1 or t.find("uint") != -1 or t.find("__u") != -1 or t == "size_t":
       t = "unsigned int"
-    elif t.find("signed") != -1 or t.find("int") != -1 or t.find("__s") != -1:
+    elif t.find("signed") != -1 or t.find("int") != -1 or t.find("__s") != -1 or t == "byte":
       t = "int"
   else:
     t = t.replace('''uint8_t''', "char")
@@ -251,7 +251,6 @@ def CheckArgSanity(arg, convertFP, convertClass):
   argIsPointer = 0
   if arg.has_key("array"):
     argIsArray = arg["array"]
-
   if arg.has_key("pointer"):
     argIsPointer = arg["pointer"]
 
@@ -364,12 +363,16 @@ def ParseFuncPointTypedef(type_t):
         argType = argTypes[i].strip()
         argTypes[i] = {
           "type": argType,
-          "pointer" : argType.count("*")
+          "pointer" : argType.count("*"),
+          "array": argType.count("["),
+#TODO: parse function pointer
+          "function_pointer": {}
         }
       type_t = { \
         "rtnType" : {
            "type" : retType, \
            "pointer": retType.count("*"), \
+           "array" : retType.count("["), \
 #TODO: parse function pointer
            "function_pointer": {}
         },
@@ -407,6 +410,7 @@ def ExpandArgTypedef(arg):
   if typedefVal != {}:
     if typedefVal["function_pointer"] == 1:
       arg["function_pointer"] = typedefVal["type"]
+      arg["pointer"] = 1
     else:
       arg["type"] = typedefVal["type"]
 
@@ -449,6 +453,7 @@ def ParseFuncPointerParams(params):
 
         if (funcPointerType != type_t):
           params[idx]["function_pointer"] = funcPointerType
+          params[idx]["pointer"] = 1
         continue
 
     params[idx]["function_pointer"] = {}
@@ -495,4 +500,3 @@ def mkdir(path):
         return True
     else:
         return False
-

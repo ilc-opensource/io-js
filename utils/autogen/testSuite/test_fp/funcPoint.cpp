@@ -1,6 +1,7 @@
 #include "stdio.h"
 #include "funcPoint.h"
 int gafp;
+int gbfp;
 
 int func_int_r_int(int a) {
   return a;
@@ -22,6 +23,14 @@ float func_float_r_int_charp(int a, char* b) {
 
 void func_v_r_v(void) {
   gafp = 16;
+}
+
+void func_v_r_intp(int *) {
+  gbfp = 26;
+}
+
+void func_v_r_intp_t(int *) {
+  gbfp = 46;
 }
 
 int func_int_r_fp2(fp_int_r_int fp1, fp_int_r_int fp2) {
@@ -48,4 +57,16 @@ int func_int_r_fpd(int (*fp1)(int)) {
 
 void func_v_r_fp(fp_v_r_v fp1) {
   fp1();
+}
+
+int func_int_r_int_fp1(int arg0, void(*fp1)(int*)) {
+  int a[5] = { 1, 2, 3, 4, 5};
+  fp1(a);
+  return arg0;
+}
+
+int func_int_r_int_fp1_t(int arg0, fp_v_r_intp fp1) {
+  int a[5] = { 1, 2, 3, 4, 5};
+  fp1(a);
+  return arg0;
 }
