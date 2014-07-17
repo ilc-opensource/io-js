@@ -1,18 +1,186 @@
 from config import *
 from util import *
 import os
+import globalVar
 
-def GenClassConstructor(className):
+def GetJsDocType(var, isResult):
+  varBasicType = GetBasicType(var)
+  if IsStructArg(varBasicType) or IsClassArg(varBasicType):
+    JsDocType = "Object"
+  elif IsEnumArg(varBasicType):
+    JsDocType = "Integer"
+  elif (var["pointer"] == 1 or var["array"] == 1):
+    if (GetIdenticalType(var["type"]) == "char*" \
+      or (GetIdenticalType(var["type"]) == "char" and var["array"] == 1)):
+      if isResult:
+        JsDocType = "String"
+      else:  
+        JsDocType = "Array|String|Object"
+    elif isinstance(var["function_pointer"], dict) and var["function_pointer"] != {}:
+      JsDocType = ""
+      for key in globalVar.TypedefCallBackJsDocTypesHT:
+        if key == var["type"]:
+          JsDocType = globalVar.TypedefCallBackJsDocTypesHT[key][0]
+          break;
+
+      if JsDocType == "":
+        JsDocType = "Callback_%d" %globalVar.CallBackJsDocTypesCnt
+        globalVar.CallBackJsDocTypesCnt = globalVar.CallBackJsDocTypesCnt + 1
+        globalVar.CallBackJsDocTypesHT[JsDocType] = var["function_pointer"]
+        print var["function_pointer"]
+        print "globalVar.CallBackJsDocTypesHT"
+        print globalVar.CallBackJsDocTypesHT
+    else:
+      JsDocType = "Array"
+  else:
+    varType = GetIdenticalType(var["type"])
+
+    if (varType == "") or (varType == "void"):
+      JsDocType = "Void"
+
+    if (varType == "bool") or (varType == "boolean"):
+      JsDocType = "Boolean"
+
+    if (varType == "unsigned int") or (varType == "int") or (varType == "char") \
+      or (varType == "short") or (varType == "long long") or (varType == "long"):
+      JsDocType = "Integer"
+
+    if (varType == "double"):
+      JsDocType = "Double"
+    if (varType == "float"):
+      JsDocType = "Float"
+
+  return JsDocType
+
+def GenCallBackJsDocType(FPName, FPTypes):
+  paraTypes = FPTypes["paraTypes"]
+  rtnType = FPTypes["rtnType"]
+  s = \
+'''
+/**
+ * @callback %s
+''' %(FPName)
+  for paraT in paraTypes:
+    if GetNoQualifierType(paraT["type"]) == "void" \
+	and paraT["pointer"] == 0 and paraT["array"] == 0:
+      s += " * @param {Void}\n"
+      continue
+    s += " * @param {%s}\n" %(GetJsDocType(paraT, False))
+  s += " * @returns {%s}\n" %(GetJsDocType(rtnType, True))
+  s += " */\n"
+  return s
+
+def GenTypedefCallBackJsDocTypesHT():
+  for f in globalVar.cppHeaders.keys():
+    typedefs = globalVar.cppHeaders[f].typedefs
+    for td in typedefs.keys():
+      if typedefs[td]["function_pointer"] == 1:
+        jsDocType = "Callback_%s" %(td)
+        globalVar.TypedefCallBackJsDocTypesHT[td] = [ jsDocType, typedefs[td]["type"]]
+
+def GenCallBackJsDocTypes():
+  s = ""
+  print "globalVar.CallBackJsDocTypesHT"
+  print globalVar.CallBackJsDocTypesHT
+  for key in globalVar.TypedefCallBackJsDocTypesHT.keys():
+    jsDocType = globalVar.TypedefCallBackJsDocTypesHT[key][0]
+    types = globalVar.TypedefCallBackJsDocTypesHT[key][1]
+    s += GenCallBackJsDocType(jsDocType, types)
+
+  for key in globalVar.CallBackJsDocTypesHT.keys():
+    types = globalVar.CallBackJsDocTypesHT[key]
+    s += GenCallBackJsDocType(key, types)
+  return s
+
+def GenParamJsDoc(param, paramName):
+  jsDocType = GetJsDocType(param, False)
+  return "\n * @param {%s} %s" %(jsDocType, paramName)
+
+def GenFuncParamsJsDoc(func):
+  s = ""
+  if func.has_key("override") and func["override"]:
+    idx = 0
+    while (1):
+      paramJsDocType = []
+      paramLen = 0
+      funcNum = len(func["funcs"])
+      for f in func["funcs"]:
+        params = f["parameters"]
+        if f["destructor"] or not CheckSanity(f):
+          funcNum = funcNum - 1
+          continue
+        if len(params) <= idx:
+          continue
+        if GetIdenticalType(params[idx]["type"]) == "void" \
+	   and params[idx]["pointer"] == 0 and params[idx]["array"] == 0:
+          continue
+        jsDocType = GetJsDocType(params[idx], False)
+        paramLen = paramLen + 1
+        if jsDocType not in paramJsDocType:
+          paramJsDocType.append(jsDocType)
+
+      if paramJsDocType == []:
+          break
+
+      s += "\n * @param {"
+      for i, p in enumerate(paramJsDocType):
+        s += p
+        if i != len(paramJsDocType) - 1:
+          s += "|"
+      s += "}"
+      if paramLen != funcNum:
+        s += " [arg%d]" %(idx)
+      else:
+        s += " arg%d" %(idx)
+      idx = idx + 1
+  else:
+    if len(func["parameters"]) == 0:
+      s += "\n * @param {Void}"
+    
+    for idx, param in enumerate(func["parameters"]):
+      if GetIdenticalType(param["type"]) == "void":
+      	s += "\n * @param {Void}"
+        continue
+         
+      paramName = param["name"]
+      if paramName == "":
+         paramName = "arg%d" %(idx)
+      
+      s += GenParamJsDoc(param, paramName)
+  return s
+
+def GenReturnJsDoc(rtnType):
+  return "\n * @returns {%s}" %(GetJsDocType(rtnType, True))
+
+def GenFuncReturnJsDoc(func):
+  if func.has_key("override") and func["override"]:
+    s = ""
+    retJsDocType = []
+    for f in func["funcs"]:
+      jsDocType = GetJsDocType(f["rtnType"], True)
+      if jsDocType not in retJsDocType:
+        retJsDocType.append(jsDocType)
+    s += "\n * @returns {"
+    for i, p in enumerate(retJsDocType):
+      s += p
+      if i != len(retJsDocType) - 1:
+        s += "|"
+    s += "}"
+    return s
+  else:
+    return GenReturnJsDoc(func["rtnType"])
+
+def GenClassConstructor(className, func):
   return \
 '''
 /**
-  @constructor
-  @name IO#%s
+ * @constructor
+ * @name IO#%s%s
  */
 %s = function() {
   return self.submit.classReq('%s', arguments, this);
 };
-''' % (className, className, className)
+''' % (className, GenFuncParamsJsDoc(func), className, className)
 
 def GenClassConstructorMap(className):
   return \
@@ -22,17 +190,22 @@ def GenClassConstructorMap(className):
   };
 ''' % (className, className, className)
 
-def GenClassMethod(className, funcName):
+def GenClassMethod(className, func):
+  funcName = func["name"]
   return \
 '''
 /**
-  @function IO#%s#%s
-  @instance
-*/
+ * @function IO#%s#%s
+ * @type function%s%s
+ * @instance
+ */
 %s.prototype.%s = function() {
   return self.submit.classMethodReq('%s', '%s', arguments, this);
 };
-''' % (className, funcName, className, funcName, className, funcName)
+''' % (className, funcName, \
+    GenFuncParamsJsDoc(func), \
+    GenFuncReturnJsDoc(func), \
+    className, funcName, className, funcName)
  
 def GenClassMethodMap(className, funcName):
   return \
@@ -49,10 +222,12 @@ def GenClassJsApi(className, c):
 
   for m in methods:
     methodName = m["name"]
+    if not IsV8FuncGen(m):
+      continue
     if m["name"] == className:
-      s += GenClassConstructor(className)
+      s += GenClassConstructor(className, m)
     else:
-      s += GenClassMethod(className, methodName)
+      s += GenClassMethod(className, m)
 
   s = AddIndent(s, 2); 
   s += \
@@ -83,9 +258,9 @@ def GenJsConst(defines):
     s += \
 '''
   /**
-  @constant IO#%s
-  @desc %s
-  */
+   * @constant IO#%s
+   * @desc %s
+   */
   self.%s = %s;
 ''' % (macros[0], macros[1], macros[0], macros[1])
   return s
@@ -98,9 +273,9 @@ def GenJsEnumConst(enums):
       s += \
 '''
   /**
-  @constant IO#%s
-  @desc %s
-  */
+   * @constant IO#%s
+   * @desc %s
+   */
   self.%s = %s;
 ''' %(v["name"], v["value"], v["name"], v["value"])
   return s
@@ -113,9 +288,7 @@ def GenPreFuncJsApi():
 '''
 (function(exports, global) {
 
-/*********************************************
-Generated with autogen tool
-*********************************************/
+%s
 var Board = function(options) {
 
   submit = options.submit;
@@ -128,7 +301,7 @@ var Board = function(options) {
     submit.config(options);
   };
   
-''' 
+''' %(GetComment())
   fp.write(s)
 
 def GenPostFuncJsApi():
@@ -136,13 +309,13 @@ def GenPostFuncJsApi():
   fp = open(f, "a")
   s = \
 '''
-
+%s
 }; //end of Board class declare
 
 exports.Board = Board;
 
 })(typeof exports === 'object'? exports: this.IOLIB, this.IOLIB);
-'''
+''' % (GenCallBackJsDocTypes())
   fp.write(s)
 
 def GenPreFuncJsApiMap():
@@ -151,17 +324,14 @@ def GenPreFuncJsApiMap():
   fp = open(f, "w")
   s = \
 '''
-/*********************************************
-Generated with autogen tool
-*********************************************/
-
+%s
 var methods = function(options) {
   var self = this;
   self.io = options.io;
   self.handle = options.handle;
   var map = {};
 
-''' 
+''' %(GetComment())
   fp.write(s)
 
 def GenPostFuncJsApiMap():
@@ -186,10 +356,19 @@ def GenJsApiGlobalVarSetterAndGetter(global_vars):
 
     s += \
 '''
+/**
+ * @function IO#%s
+ * @type function
+ * @param {Void}%s
+ * @instance
+ */
   self.%s = function() {
     return self.submit.funcReq('%s', arguments);
   };
-'''%(getFuncName, getFuncName)
+'''%(getFuncName, \
+    GenReturnJsDoc(var), \
+    getFuncName, \
+    getFuncName)
     
     if var["constant"] == 1:
       continue
@@ -197,10 +376,17 @@ def GenJsApiGlobalVarSetterAndGetter(global_vars):
     setFuncName = "set" + varName
     s += \
 '''
+/**
+ * @function IO#%s
+ * @type function
+%s
+ * @return {Void}
+ * @instance
+ */
   self.%s = function() {
     return self.submit.funcReq('%s', arguments);
   };
-'''%(setFuncName, setFuncName)
+'''%(setFuncName, GenParamJsDoc(var, var["name"]) ,setFuncName, setFuncName)
 
   return s
 
@@ -232,21 +418,26 @@ def GenJsApiMapGlobalVarSetterAndGetter(global_vars):
 
   return s
 
-def GenFuncJsApi(module, func):
+def GenFuncJsApi(func):
+  if not IsV8FuncGen(func):
+    return ""
   funcName = func["name"]
   return \
 '''
   /**
-   @function IO#%s
-   @type Function
-   @instance
+   * @function IO#%s
+   * @type function%s%s
+   * @instance
    */
   self.%s = function() {
     return self.submit.funcReq('%s', arguments);
   };
-''' % (funcName, funcName, funcName)
+''' % (funcName, \
+       AddIndent(GenFuncParamsJsDoc(func), 2),
+       AddIndent(GenFuncReturnJsDoc(func), 2),\
+       funcName, funcName)
 
-def GenFuncJsApiMap(module, func):
+def GenFuncJsApiMap(func):
   funcName = func["name"]
   return \
 '''
@@ -258,20 +449,19 @@ def GenFuncJsApiMap(module, func):
 def GenJsApi(module, cppHeader):
   clientStr = \
 '''
-%s
 /****************************************
            %s
 ****************************************/
-''' % (GetComment(), module)
+''' % (module)
 
   servStr = \
 '''
-%s
   /****************************************
              %s
   ****************************************/
-''' % (GetComment(), module)
+''' % (module)
 
+  GenTypedefCallBackJsDocTypesHT()
   for c in cppHeader.classes:
     if cppHeader.classes[c]["declaration_method"] == "class":
       clientStr += GenClassJsApi(c, cppHeader.classes[c])
@@ -285,14 +475,14 @@ def GenJsApi(module, cppHeader):
 
   #generate map of functions
   for idx, func in enumerate(cppHeader.functions):
-    clientStr += GenFuncJsApi(module, func)
-    servStr += GenFuncJsApiMap(module, func)
+    clientStr += GenFuncJsApi(func)
+    servStr += GenFuncJsApiMap(func)
 
   f = OUTPUT_COMP_PATH + "/" + TARGET +".js"
   fp = open(f, "a")
   fp.write(clientStr)
   printDbg( "generate " + f)
-  
+
   f = OUTPUT_SERVER_PATH + "/" + TARGET +".js"
   fp = open(f, "a")
   fp.write(servStr)
