@@ -86,7 +86,7 @@ iot-io-companion can run in nodejs and browser. In nodejs please load it as norm
 ## APIs
 
 ### Arduino like APIs
-It shares almost the same APIs with `iot-io` library except for below APIs. The Arduino like APIs' document is under *doc* directory
+It shares almost the same APIs with `iot-io` library except for below APIs. Please read the [API document] ( http://ilc-opensource.github.io/io-js/doc) to know more details
 
 ### new IO(options)
 Only list the extra options here compares to iot-io. 
@@ -100,4 +100,4 @@ Added a remote user-defined function
 
 ## License
 
-The BSD License
+The BSD License 

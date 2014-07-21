@@ -5,7 +5,7 @@ A Javascript based IO library. It provides Arduino like APIs.
 ## Target execution environment
 
 * Intel Galileo
-* Intel Edsion (TODO) 
+* Intel Edison (TODO) 
 
 ## Preinstall
 
@@ -98,9 +98,8 @@ led.on();
 
 ## APIs
 
-Currently there are more than 100 APIs which come from the Intel Galileo Arduino SW. Please go to doc directory to know more details. These APIs are automatically generated with our tools, if you want to know more, please go to https://github.com/ilc-opensource/io-js
+Currently there are more than 100 APIs which come from the Intel Galileo Arduino SW. Please go to doc directory to know more details. These APIs are automatically generated with our tools. Please read the [API document] ( http://ilc-opensource.github.io/io-js/doc) to know more details
 
 ## License
 
 The BSD License
-

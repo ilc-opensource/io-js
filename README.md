@@ -4,8 +4,6 @@ A unified Javascript IO library for IOT device([Galileo](http://www.intel.com/co
 
 ## Components
 
-It is consisted of
-
 * Two libraries: iot-io, iot-io-companion
 * A server: iot-io-server
 * An automation tool: autogen
@@ -20,23 +18,25 @@ The target execution environment is IOT devices including Galileo and Edison
 
 Remotely call iot-io built-in Arduino like functions and user-defined functions. The function call will be translated to a JSON-RPC request and the iot-io-server will receive the request then call iot-io library natively. 
 
-The target execution environment is companion devices including phone/tablet/pc/etc. This library runs in Nodejs or Browser.
+The target execution environment is companion devices including phone/tablet/pc/etc. This library can run in Nodejs or browser.
  
 ### iot-io-server
 
-A RPC server. It can expose iot-io APIs and user defined functions to remote companion devices. 
+A [JSON-RPC]( http://json-rpc.org/) server can expose iot-io¡¯s APIs and even user defined functions to remote companion devices. 
 
-Basiclly the target execution environment is IOT device.
+Basically its target execution environment is IOT device.
 
 ### autogen
 
-A Python tool is used to generate the main skeleton of iot-io/iot-io-companion/iot-io-server. If user want to add more C/C++ functions to these software stack he can use it to read standard .h files then the new iot-io/iot-io-companion/iot-io-server will be generated.  
+It is a Python tool. Its input is standard C header file and its output is the main skeleton of iot-io/iot-io-companion/iot-io-server. When user wants to add C/C++ functions as new interfaces to io-js software stack he doesn¡¯t need to learn any C to JS binding. This tool can help this javascript library adapt to the changes of C/C++ library. 
 
 ## Prebuild
 
-If you only want to build some components, please go to the corresponding directory and read the README. 
+If you only want to build some of components, please go to the corresponding directory and read the README. Below instruction is about how to build the whole software stack.
 
 * Please follow the document [Intel Galileo Getting Started](https://communities.intel.com/docs/DOC-22796) to install Yocto on Galileo and boot your board from a SD card
+
+* Because SD card image doesn¡¯t contain development tools such as gcc, g++ etc, then we have to do cross build. Then please prepare a Linux machine and install below tools.
 
 * Install node-gyp
 ```shell
@@ -53,7 +53,7 @@ sudo npm install -g node-gyp
     source target/device/set_cross_compiler.sh
 ```
 
-* Optionally install uglify for compressing and mangling 
+* Optionally install uglify for Javascript library compressing and mangling
 ```shell
 sudo npm install uglify-js
 ```
@@ -64,11 +64,7 @@ sudo npm install -g jsdoc
 ```
 ## Build
 
-Build it with gmake
-```shell
-make
-```
-but make will not download all dependent nodejs modules, then we suggest you to use npm
+Build with npm and install dependent libraries
 ```shell
 npm install
 ```
@@ -78,9 +74,9 @@ npm install
 
 ### Control IO with Javascript on IOT device
 
-With iot-io you can develop the program with Javascript to control IO. The API is Arduino like and easy to understand.
+With iot-io library programmer can develop the program with Javascript to control IO. The API is Arduino like and easy to understand.
 
-For example we can turn on a LED by below file
+For example we can turn on a LED on digital pin 13 with below file
 ```javascript
 var IOLIB = require('iot-io');
 var io = new IOLIB.IO({
@@ -108,7 +104,7 @@ led.on();
 
 ### Remote IO Control 
 
-We can use all of iot-io APIs as RPC(Remote Procdure call) functions with iot-io-companion. The below code can remotely turn on the LED from another PC. The only difference to above example is we must set extra options to tell where is remote RPC server. Then save below codes to file `led_rpc.js` on remote PC. 
+We can use all of iot-io APIs as RPC(Remote Procdure call) functions with iot-io-companion. The below code can remotely turn on the LED from another machine. The only difference to above example is we must set extra options to tell where remote RPC server is. Please save below codes to file `led_rpc.js` on remote PC. The first line is to make sure this library can be loaded in nodejs and browser.
 
 ```javascript
 var IOLIB = (typeof require === 'function') ?
@@ -129,24 +125,20 @@ var led = new IOLIB.Led({
 led.on();
 ```
 
-On IOT device please install iot-io-server.
+On IOT device please install and run iot-io-server to expose built-in APIs
 ```shell
 npm install -g iot-io-server
-```
-
-Run the RPC server on IOT device
-```shell
 iot-io-server
 ```
 
-Back to your remote PC. Now you can run led_rpc.js and it will turn on the IOT device's LED remotely.
+Back to your remote machine and run led_rpc.js to turn on the LED on IOT device.
 ```shell
 node led_rpc.js
 ```
 
 ### Run in Browser
 
-The remote control codes can run in browser & nodejs. Because our library is based on jQuery, please load jQuery firstly. You can create a HTML file `index.html` and put it in the directory in which `led_rpc.js` is.
+The remote control codes can run in browser & nodejs. Because iot-io-companion library for browser is based on jQuery please load jQuery firstly. You can create a HTML file `index.html` and put it in the directory in which `led_rpc.js` is.
 
 ```html
 <script src = 'http://code.jquery.com/jquery-1.11.0.min.js'> </script>
@@ -154,17 +146,17 @@ The remote control codes can run in browser & nodejs. Because our library is bas
 <script src = './led_rpc.js'></script>
 ```
 
-Then you can open `led.html` in browser and led will be turned on
+Then you can open `led.html` in browser and LED on IOT device will be turned on
 
-### Pack it to Mobile APP
+### Pack it to mobile APP
 
 The above HTML page can be packed to an Android/iOS/WP/Tizen/... application with [Intel XDK](http://xdk-software.intel.com/). You can create a project in XDK and import above index.html with libraries. You can also debug the application with XDK.
 
 ### Expose user defined function
 
-The iot-io-server can not only expose built-in APIs but also user defined functions. 
+The iot-io-server can expose not only built-in APIs but also user defined functions. 
 
-Prepare the file which contains expose candidate. Suppose it is called `extra.js`. User defined functions are saved in variable `RPC`. A global variable `isRpcServer` can help determine whether this file is opened  by iot-io-server.
+Prepare the file which contains expose candidate. User defined functions are saved in global variable expose¡¯s member: `RPC`. A global variable `isRpcServer` can help determine whether this file is opened by iot-io-server.
 
 ```javascript
 var Foo = function(s) {
@@ -183,7 +175,7 @@ Load it with `iot-io-server`
 iot-io-server extra.js
 ```
 
-The client side can use exposed function `myFun` in nodejs or browser.
+The client side can use exposed function `myFun` in nodejs or browser after called `io.addRpc`.
 
 ```javascript
 var IOLIB = (typeof require === 'function') ? 
@@ -202,7 +194,7 @@ myFun('world'); //will output 'hello world'
 
 ### Add C/C++ function with autogen
 
-Suppose user has a new function in my_print.cpp
+With autogen tool programmer can easily translate C/C++ function to Javascript functions. Suppose user has a new function `myPrint` in my_print.cpp
 
 ```c
 void myPrint(char *s) {
@@ -215,7 +207,7 @@ In my_print.h the function myPrint is declared as extern
 extern void myPrint(char *s);
 ```
 
-Go to target/device/libio and put these two files under src, then add .cpp file to libio.gyp
+Go to target/device/libio and put these two files under directory src, then add .cpp file to libio.gyp
 
 ```javascript
       'extra_srcs' : [
@@ -232,12 +224,15 @@ add .h file to export.gyp
       ],
 ```
 
-Finally go to the root directory and rebuild all of library
+Finally go to the root directory and rebuild the whole software stack
 
 ```shell
 cd io-js
 make
 ```
+## Arduino like APIs
+
+Currently there are more than 100 APIs which are translated from the [Intel Galileo Arduino SW]( https://communities.intel.com/docs/DOC-22226) with autogen tool. Please read the [API document] ( http://ilc-opensource.github.io/io-js/doc) to know more details
 
 ## Test
 
@@ -265,6 +260,6 @@ make test
 | /util/autogen        | autogen tool |
 | /doc                 |documents. This directory will be created by jsdoc |
 
-## Licese
+## License
 
 All of components use the BSD license  
