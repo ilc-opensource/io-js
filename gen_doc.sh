@@ -16,6 +16,6 @@ FILES='
   ./target/companion/index.js
   ./target/extension/led.js 
 '
-RUN="jsdoc -d $DOC $EXTRA_OPTION $* $FILES"
+RUN="jsdoc -d $DOC $EXTRA_OPTION $* $FILES ./README.md"
 echo $RUN
 $RUN

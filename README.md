@@ -141,9 +141,9 @@ node led_rpc.js
 The remote control codes can run in browser & nodejs. Because iot-io-companion library for browser is based on jQuery please load jQuery firstly. You can create a HTML file `index.html` and put it in the directory in which `led_rpc.js` is.
 
 ```html
-<script src = 'http://code.jquery.com/jquery-1.11.0.min.js'> </script>
-<script src = './iot-io-browser-general.js'></script>
-<script src = './led_rpc.js'></script>
+<script src='http://code.jquery.com/jquery-1.11.0.min.js'> </script>
+<script src='./iot-io-browser-general.js'></script>
+<script src='./led_rpc.js'></script>
 ```
 
 Then you can open `led.html` in browser and LED on IOT device will be turned on
