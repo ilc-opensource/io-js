@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8'>
+    <meta http-equiv="X-UA-Compatible" content="chrome=1">
+    <meta name="viewport" content="width=640" />
+
+    <link rel="stylesheet" href="stylesheets/core.css" media="screen"/>
+    <link rel="stylesheet" href="stylesheets/mobile.css" media="handheld, only screen and (max-device-width:640px)"/>
+    <link rel="stylesheet" href="stylesheets/pygment_trac.css"/>
+
+    <script type="text/javascript" src="javascripts/modernizr.js"></script>
+    <script type="text/javascript" src="https://ajax.googleapis.com/ajax/libs/jquery/1.7.1/jquery.min.js"></script>
+    <script type="text/javascript" src="javascripts/headsmart.min.js"></script>
+    <script type="text/javascript">
+      $(document).ready(function () {
+        $('#main_content').headsmart()
+      })
+    </script>
+    <title>Io-js by ilc-opensource</title>
+  </head>
+
+  <body>
+    <a id="forkme_banner" href="https://github.com/ilc-opensource/io-js">View on GitHub</a>
+    <div class="shell">
+
+      <header>
+        <span class="ribbon-outer">
+          <span class="ribbon-inner">
+            <h1>Io-js</h1>
+            <h2>Javscript IO library for IoT device, companion device and development host</h2>
+          </span>
+          <span class="left-tail"></span>
+          <span class="right-tail"></span>
+        </span>
+      </header>
+
+      <section id="downloads">
+        <span class="inner">
+          <a href="https://github.com/ilc-opensource/io-js/zipball/master" class="zip"><em>download</em> .ZIP</a><a href="https://github.com/ilc-opensource/io-js/tarball/master" class="tgz"><em>download</em> .TGZ</a>
+        </span>
+      </section>
+
+
+      <span class="banner-fix"></span>
+
+
+      <section id="main_content">
+        <h1>
+<a name="iot-io-library" class="anchor" href="#iot-io-library"><span class="octicon octicon-link"></span></a>IOT IO Library</h1>
+
+<p>A unified Javascript IO library for IOT device(<a href="http://www.intel.com/content/www/us/en/intelligent-systems/galileo/galileo-overview.html">Galileo</a>/Edison), companion device(phone/tablet) and XDK. </p>
+
+<h2>
+<a name="components" class="anchor" href="#components"><span class="octicon octicon-link"></span></a>Components</h2>
+
+<p>It is consisted of</p>
+
+<ul>
+<li>Two libraries: iot-io, iot-io-companion</li>
+<li>A server: iot-io-server</li>
+<li>An automation tool: autogen</li>
+</ul><h3>
+<a name="iot-io" class="anchor" href="#iot-io"><span class="octicon octicon-link"></span></a>iot-io</h3>
+
+<p>A Javascript based IO library which provides Arduino like APIs. </p>
+
+<p>The target execution environment is IOT devices including Galileo and Edison</p>
+
+<h3>
+<a name="iot-io-companion" class="anchor" href="#iot-io-companion"><span class="octicon octicon-link"></span></a>iot-io-companion</h3>
+
+<p>Remotely call iot-io built-in Arduino like functions and user-defined functions. The function call will be translated to a JSON-RPC request and the iot-io-server will receive the request then call iot-io library natively. </p>
+
+<p>The target execution environment is companion devices including phone/tablet/pc/etc. This library runs in Nodejs or Browser.</p>
+
+<h3>
+<a name="iot-io-server" class="anchor" href="#iot-io-server"><span class="octicon octicon-link"></span></a>iot-io-server</h3>
+
+<p>A RPC server. It can expose iot-io APIs and user defined functions to remote companion devices. </p>
+
+<p>Basiclly the target execution environment is IOT device.</p>
+
+<h3>
+<a name="autogen" class="anchor" href="#autogen"><span class="octicon octicon-link"></span></a>autogen</h3>
+
+<p>A Python tool is used to generate the main skeleton of iot-io/iot-io-companion/iot-io-server. If user want to add more C/C++ functions to these software stack he can use it to read standard .h files then the new iot-io/iot-io-companion/iot-io-server will be generated.  </p>
+
+<h2>
+<a name="prebuild" class="anchor" href="#prebuild"><span class="octicon octicon-link"></span></a>Prebuild</h2>
+
+<p>If you only want to build some components, please go to the corresponding directory and read the README. </p>
+
+<ul>
+<li><p>Please follow the document <a href="https://communities.intel.com/docs/DOC-22796">Intel Galileo Getting Started</a> to install Yocto on Galileo and boot your board from a SD card</p></li>
+<li><p>Install node-gyp</p></li>
+</ul><pre lang="shell"><code>sudo npm install -g node-gyp
+</code></pre>
+
+<ul>
+<li>
+<p>Install cross compiler</p>
+
+<ul>
+<li><p>The Galileo Arduino IDE has contained a cross compiler, please download the Linux version from <a href="https://communities.intel.com/docs/DOC-22226">https://communities.intel.com/docs/DOC-22226</a> to your host Linux machine</p></li>
+<li><p>Edit target/device/set_cross_compiler.sh and set <code>ARDUINO_PATH</code> to the right path</p></li>
+<li><p>run the script to set environment values</p></li>
+</ul>
+</li>
+</ul><pre lang="shell"><code>    source target/device/set_cross_compiler.sh
+</code></pre>
+
+<ul>
+<li>Optionally install uglify for compressing and mangling </li>
+</ul><pre lang="shell"><code>sudo npm install uglify-js
+</code></pre>
+
+<ul>
+<li>Optionally install jsdoc for document generation</li>
+</ul><pre lang="shell"><code>sudo npm install -g jsdoc
+</code></pre>
+
+<h2>
+<a name="build" class="anchor" href="#build"><span class="octicon octicon-link"></span></a>Build</h2>
+
+<p>Build it with gmake</p>
+
+<pre lang="shell"><code>make
+</code></pre>
+
+<p>but make will not download all dependent nodejs modules, then we suggest you to use npm</p>
+
+<pre lang="shell"><code>npm install
+</code></pre>
+
+<h2>
+<a name="quick-start" class="anchor" href="#quick-start"><span class="octicon octicon-link"></span></a>Quick Start</h2>
+
+<h3>
+<a name="control-io-with-javascript-on-iot-device" class="anchor" href="#control-io-with-javascript-on-iot-device"><span class="octicon octicon-link"></span></a>Control IO with Javascript on IOT device</h3>
+
+<p>With iot-io you can develop the program with Javascript to control IO. The API is Arduino like and easy to understand.</p>
+
+<p>For example we can turn on a LED by below file</p>
+
+<div class="highlight highlight-javascript"><pre><span class="kd">var</span> <span class="nx">IOLIB</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'iot-io'</span><span class="p">);</span>
+<span class="kd">var</span> <span class="nx">io</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">IOLIB</span><span class="p">.</span><span class="nx">IO</span><span class="p">({</span>
+  <span class="nx">log</span><span class="o">:</span> <span class="kc">true</span>
+<span class="p">});</span>
+
+<span class="nx">io</span><span class="p">.</span><span class="nx">pinMode</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="nx">io</span><span class="p">.</span><span class="nx">OUTPUT</span><span class="p">);</span>
+<span class="nx">io</span><span class="p">.</span><span class="nx">digitalWrite</span><span class="p">(</span><span class="mi">13</span><span class="p">,</span> <span class="nx">io</span><span class="p">.</span><span class="nx">HIGH</span><span class="p">);</span>
+</pre></div>
+
+<p>Or you can use high level APIs which have hidden some hardware details. For above example, you can use API of <code>Led</code></p>
+
+<div class="highlight highlight-javascript"><pre><span class="kd">var</span> <span class="nx">IOLIB</span> <span class="o">=</span> <span class="nx">require</span><span class="p">(</span><span class="s1">'iot-io'</span><span class="p">);</span>
+<span class="kd">var</span> <span class="nx">io</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">IOLIB</span><span class="p">.</span><span class="nx">IO</span><span class="p">({</span>
+  <span class="nx">log</span><span class="o">:</span> <span class="kc">true</span>
+<span class="p">});</span>
+
+<span class="kd">var</span> <span class="nx">led</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">IOLIB</span><span class="p">.</span><span class="nx">Led</span><span class="p">({</span>
+  <span class="nx">io</span><span class="o">:</span> <span class="nx">io</span><span class="p">,</span>
+  <span class="nx">pin</span><span class="o">:</span> <span class="mi">13</span>
+<span class="p">});</span>
+
+<span class="nx">led</span><span class="p">.</span><span class="nx">on</span><span class="p">();</span>
+</pre></div>
+
+<h3>
+<a name="remote-io-control" class="anchor" href="#remote-io-control"><span class="octicon octicon-link"></span></a>Remote IO Control</h3>
+
+<p>We can use all of iot-io APIs as RPC(Remote Procdure call) functions with iot-io-companion. The below code can remotely turn on the LED from another PC. The only difference to above example is we must set extra options to tell where is remote RPC server. Then save below codes to file <code>led_rpc.js</code> on remote PC. </p>
+
+<div class="highlight highlight-javascript"><pre><span class="kd">var</span> <span class="nx">IOLIB</span> <span class="o">=</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">require</span> <span class="o">===</span> <span class="s1">'function'</span><span class="p">)</span> <span class="o">?</span>
+            <span class="nx">require</span><span class="p">(</span><span class="s1">'iot-io-companion'</span><span class="p">)</span><span class="o">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">IOLIB</span><span class="p">;</span>
+
+<span class="kd">var</span> <span class="nx">io</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">IOLIB</span><span class="p">.</span><span class="nx">IO</span><span class="p">({</span>
+  <span class="nx">log</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+  <span class="nx">rpc</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>  <span class="c1">// turn on rpc call</span>
+  <span class="nx">port</span><span class="o">:</span> <span class="mi">2000</span><span class="p">,</span> <span class="c1">// port of RPC server</span>
+  <span class="nx">hostname</span><span class="o">:</span> <span class="s1">'192.168.2.11'</span><span class="p">,</span> <span class="c1">//address or machine name of RPC server</span>
+<span class="p">});</span>
+
+<span class="kd">var</span> <span class="nx">led</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">IOLIB</span><span class="p">.</span><span class="nx">Led</span><span class="p">({</span>
+  <span class="nx">io</span><span class="o">:</span> <span class="nx">io</span><span class="p">,</span>
+  <span class="nx">pin</span><span class="o">:</span> <span class="mi">13</span>
+<span class="p">});</span>
+
+<span class="nx">led</span><span class="p">.</span><span class="nx">on</span><span class="p">();</span>
+</pre></div>
+
+<p>On IOT device please install iot-io-server.</p>
+
+<pre lang="shell"><code>npm install -g iot-io-server
+</code></pre>
+
+<p>Run the RPC server on IOT device</p>
+
+<pre lang="shell"><code>iot-io-server
+</code></pre>
+
+<p>Back to your remote PC. Now you can run led_rpc.js and it will turn on the IOT device's LED remotely.</p>
+
+<pre lang="shell"><code>node led_rpc.js
+</code></pre>
+
+<h3>
+<a name="run-in-browser" class="anchor" href="#run-in-browser"><span class="octicon octicon-link"></span></a>Run in Browser</h3>
+
+<p>The remote control codes can run in browser &amp; nodejs. Because our library is based on jQuery, please load jQuery firstly. You can create a HTML file <code>index.html</code> and put it in the directory in which <code>led_rpc.js</code> is.</p>
+
+<div class="highlight highlight-html"><pre><span class="nt">&lt;script </span><span class="na">src =</span><span class="err"> </span><span class="s">'http://code.jquery.com/jquery-1.11.0.min.js'</span><span class="nt">&gt;</span> <span class="nt">&lt;/script&gt;</span>
+<span class="nt">&lt;script </span><span class="na">src =</span><span class="err"> </span><span class="s">'./iot-io-browser-general.js'</span><span class="nt">&gt;&lt;/script&gt;</span>
+<span class="nt">&lt;script </span><span class="na">src =</span><span class="err"> </span><span class="s">'./led_rpc.js'</span><span class="nt">&gt;&lt;/script&gt;</span>
+</pre></div>
+
+<p>Then you can open <code>led.html</code> in browser and led will be turned on</p>
+
+<h3>
+<a name="pack-it-to-mobile-app" class="anchor" href="#pack-it-to-mobile-app"><span class="octicon octicon-link"></span></a>Pack it to Mobile APP</h3>
+
+<p>The above HTML page can be packed to an Android/iOS/WP/Tizen/... application with <a href="http://xdk-software.intel.com/">Intel XDK</a>. You can create a project in XDK and import above index.html with libraries. You can also debug the application with XDK.</p>
+
+<h3>
+<a name="expose-user-defined-function" class="anchor" href="#expose-user-defined-function"><span class="octicon octicon-link"></span></a>Expose user defined function</h3>
+
+<p>The iot-io-server can not only expose built-in APIs but also user defined functions. </p>
+
+<p>Prepare the file which contains expose candidate. Suppose it is called <code>extra.js</code>. User defined functions are saved in variable <code>RPC</code>. A global variable <code>isRpcServer</code> can help determine whether this file is opened  by iot-io-server.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="kd">var</span> <span class="nx">Foo</span> <span class="o">=</span> <span class="kd">function</span><span class="p">(</span><span class="nx">s</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">console</span><span class="p">.</span><span class="nx">log</span><span class="p">(</span><span class="s1">'hello '</span> <span class="o">+</span> <span class="nx">s</span><span class="p">);</span>
+<span class="p">};</span>
+
+<span class="k">if</span><span class="p">(</span><span class="nx">isRpcServer</span><span class="p">)</span> <span class="p">{</span>
+  <span class="nx">exports</span><span class="p">.</span><span class="nx">RPC</span> <span class="o">=</span> <span class="p">{</span>
+    <span class="s1">'myFun'</span><span class="o">:</span> <span class="nx">Foo</span>
+  <span class="p">};</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>Load it with <code>iot-io-server</code></p>
+
+<pre lang="shell"><code>iot-io-server extra.js
+</code></pre>
+
+<p>The client side can use exposed function <code>myFun</code> in nodejs or browser.</p>
+
+<div class="highlight highlight-javascript"><pre><span class="kd">var</span> <span class="nx">IOLIB</span> <span class="o">=</span> <span class="p">(</span><span class="k">typeof</span> <span class="nx">require</span> <span class="o">===</span> <span class="s1">'function'</span><span class="p">)</span> <span class="o">?</span> 
+            <span class="nx">require</span><span class="p">(</span><span class="s1">'iot-io-companion'</span><span class="p">)</span><span class="o">:</span> <span class="k">this</span><span class="p">.</span><span class="nx">IOLIB</span><span class="p">;</span>
+
+<span class="kd">var</span> <span class="nx">io</span> <span class="o">=</span> <span class="k">new</span> <span class="nx">IOLIB</span><span class="p">.</span><span class="nx">IO</span><span class="p">({</span>
+  <span class="nx">rpc</span><span class="o">:</span> <span class="kc">true</span><span class="p">,</span>
+  <span class="nx">port</span><span class="o">:</span> <span class="mi">2000</span><span class="p">,</span>
+  <span class="nx">hostname</span><span class="o">:</span> <span class="s1">'localhost'</span><span class="p">,</span>
+<span class="p">});</span>
+
+<span class="nx">io</span><span class="p">.</span><span class="nx">addRpc</span><span class="p">(</span><span class="s1">'myFun'</span><span class="p">);</span>
+
+<span class="nx">myFun</span><span class="p">(</span><span class="s1">'world'</span><span class="p">);</span> <span class="c1">//will output 'hello world'</span>
+</pre></div>
+
+<h3>
+<a name="add-cc-function-with-autogen" class="anchor" href="#add-cc-function-with-autogen"><span class="octicon octicon-link"></span></a>Add C/C++ function with autogen</h3>
+
+<p>Suppose user has a new function in my_print.cpp</p>
+
+<div class="highlight highlight-c"><pre><span class="kt">void</span> <span class="nf">myPrint</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">s</span><span class="p">)</span> <span class="p">{</span>
+  <span class="n">printf</span><span class="p">(</span><span class="s">"hello %s</span><span class="se">\n</span><span class="s">"</span><span class="p">,</span> <span class="n">s</span><span class="p">);</span>
+<span class="p">}</span>
+</pre></div>
+
+<p>In my_print.h the function myPrint is declared as extern</p>
+
+<div class="highlight highlight-c"><pre><span class="k">extern</span> <span class="kt">void</span> <span class="nf">myPrint</span><span class="p">(</span><span class="kt">char</span> <span class="o">*</span><span class="n">s</span><span class="p">);</span>
+</pre></div>
+
+<p>Go to target/device/libio and put these two files under src, then add .cpp file to libio.gyp</p>
+
+<div class="highlight highlight-javascript"><pre>      <span class="s1">'extra_srcs'</span> <span class="o">:</span> <span class="p">[</span>
+        <span class="s1">'&lt;(extra_dir)/my_print.cpp'</span><span class="p">,</span>
+      <span class="p">],</span>
+
+</pre></div>
+
+<p>add .h file to export.gyp</p>
+
+<div class="highlight highlight-javascript"><pre>      <span class="s1">'export_headers'</span> <span class="o">:</span> <span class="p">[</span>
+        <span class="s1">'&lt;(extra_dir)/my_print.h'</span><span class="p">,</span>
+      <span class="p">],</span>
+</pre></div>
+
+<p>Finally go to the root directory and rebuild all of library</p>
+
+<pre lang="shell"><code>cd io-js
+make
+</code></pre>
+
+<h2>
+<a name="test" class="anchor" href="#test"><span class="octicon octicon-link"></span></a>Test</h2>
+
+<ul>
+<li>Test functionality with <a href="http://busterjs.org/">buster.js</a>
+</li>
+</ul><pre lang="shell"><code>make test
+</code></pre>
+
+<ul>
+<li>Test autogen parser</li>
+</ul><pre lang="shell"><code>./test_autogen
+</code></pre>
+
+<h2>
+<a name="directories" class="anchor" href="#directories"><span class="octicon octicon-link"></span></a>Directories</h2>
+
+<table>
+<thead><tr>
+<th align="left">Directory</th>
+<th align="left">Description</th>
+</tr></thead>
+<tbody>
+<tr>
+<td align="left">/target/device</td>
+<td align="left">iot-io</td>
+</tr>
+<tr>
+<td align="left">/target/device/libio</td>
+<td align="left">Arduino library</td>
+</tr>
+<tr>
+<td align="left">/target/companion</td>
+<td align="left">iot-io-companion</td>
+</tr>
+<tr>
+<td align="left">/target/server</td>
+<td align="left">iot-io-server</td>
+</tr>
+<tr>
+<td align="left">/target/extension</td>
+<td align="left">high level APIs for iot-io &amp; iot-io-companion</td>
+</tr>
+<tr>
+<td align="left">/util/autogen</td>
+<td align="left">autogen tool</td>
+</tr>
+<tr>
+<td align="left">/doc</td>
+<td align="left">documents. This directory will be created by jsdoc</td>
+</tr>
+</tbody>
+</table><h2>
+<a name="licese" class="anchor" href="#licese"><span class="octicon octicon-link"></span></a>Licese</h2>
+
+<p>All of components use the BSD license  </p>
+      </section>
+
+      <footer>
+        <span class="ribbon-outer">
+          <span class="ribbon-inner">
+            <p>this project by <a href="https://github.com/ilc-opensource">ilc-opensource</a> can be found on <a href="https://github.com/ilc-opensource/io-js">GitHub</a></p>
+          </span>
+          <span class="left-tail"></span>
+          <span class="right-tail"></span>
+        </span>
+        <p>Generated with <a href="http://pages.github.com">GitHub Pages</a> using Merlot</p>
+        <span class="octocat"></span>
+      </footer>
+
+    </div>
+
+    
+  </body>
+</html>
