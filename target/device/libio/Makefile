@@ -2,10 +2,10 @@ build:
 	node-gyp build
 
 rebuild:
-	node-gyp rebuild
+	node-gyp rebuild --arch=ia32
 
 configure:
-	node-gyp configure
+	node-gyp configure --arch=ia32
 
 clean:
 	node-gyp clean

@@ -1,13 +1,21 @@
-var jayson  = require('../../lib/jayson');
+#!/usr/bin/env node
+
+var jayson  = require(__dirname + '/lib/jayson');
 var Board   = require(__dirname + '/lib/board/galileo.js');
 var handle  = require(__dirname + '/lib/handleRpc.js');
-var IOLIB   = require(__dirname + '/../');
 var fs      = require('fs');
+
+var IOLIB;
+
+if(fs.existsSync(__dirname + '/../index.js'))
+  IOLIB = require(__dirname + '/../');
+else
+  IOLIB = require('iot-io');
 
 isRpcServer = true;
 
 var io  = new IOLIB.IO({
-  emu: true,
+  //emu: true,
   quickInit: false,
   log: true,
 });

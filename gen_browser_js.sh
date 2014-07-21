@@ -1,10 +1,10 @@
 
-TARGET_DIR=.
+TARGET_DIR=./target/companion
 ROOT=.
-NAME=iotio
+NAME=iot-io-browser
 VER=general
 OUTPUT=$NAME-$VER.js
-OUTPUT_MINI=$NAME-$VER.mini.js
+OUTPUT_MINI=$NAME-$VER.min.js
 while getopts v:o:d:lc option
 do
     case "$option" in
@@ -66,8 +66,8 @@ do
 done
 
 echo ""
-echo "verify tool"
 TOOL=uglifyjs
+echo "verify tool: $TOOL"
 which $TOOL
 RET=$?
 

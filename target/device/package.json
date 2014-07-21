@@ -1,17 +1,24 @@
 {
   "author" : "Zhanglin Liu <zhanglin.liu@intel.com>",
 
-  "name"   : "io-node",
+  "name"   : "iot-io",
 
   "description" : "JS binding for IO library",
 
-  "version" : "0.0.1",
+  "version" : "0.1.1",
 
   "main"   : "index.js",
 
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ilc-opensource/io-js"
+  },
+
   "dependencies" : {
     "bindings": "*"
+  },
+
+  "scripts" : {
+    "install" : "(make rebuild || true)"
   }
 }
-
-

@@ -21,7 +21,7 @@
 
     var self = this;	  
     if(typeof require === 'function' && typeof module === 'object') {
-      jayson = require('../../../../lib/jayson');
+      jayson = require('../lib/jayson');
       utils = require('../utils.js');
       jayClient = jayson.client.http(options);
     } else {

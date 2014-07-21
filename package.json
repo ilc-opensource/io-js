@@ -19,7 +19,7 @@
   },
 
   "bin" : {
-    "iotio-server" : "./bin/iotio-server.sh"
+    "iot-io-server" : "./bin/iotio-server.sh"
   },
 
   "scripts" : {

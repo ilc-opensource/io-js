@@ -1,0 +1,17 @@
+{
+  "author" : "Zhanglin Liu <zhanglin.liu@intel.com>",
+
+  "name"   : "iot-io-companion",
+
+  "description" : "remote access iot io",
+
+  "version" : "0.1.0",
+
+  "main"   : "index.js",
+
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ilc-opensource/io-js"
+  }
+
+}
