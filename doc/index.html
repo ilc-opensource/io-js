@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Source: extension/led.js</title>
+    <title>Index</title>
     
     
     
@@ -697,111 +697,191 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="led.js.html">Source: extension/led.js</h1>
+        <h1 class="page-title" data-filename="index.html">Index</h1>
         
 
 
     
+
+
+    <h3> </h3>
+
+
+
+
+
+
+
+
+    
+
+
+
+
     <section>
-        <article>
-            <pre class="prettyprint source"><code>(function(exports, global) {
-/////////////////////////////////////////////
+        <article class="readme"><h1>IOT IO Library</h1><p>A unified Javascript IO library for IOT device(<a href="http://www.intel.com/content/www/us/en/intelligent-systems/galileo/galileo-overview.html">Galileo</a>/Edison), companion device(phone/tablet) and XDK. </p>
+<h2>Components</h2><ul>
+<li>Two libraries: iot-io, iot-io-companion</li>
+<li>A server: iot-io-server</li>
+<li>An automation tool: autogen</li>
+</ul>
+<h3>iot-io</h3><p>A Javascript based IO library which provides Arduino like APIs. </p>
+<p>The target execution environment is IOT devices including Galileo and Edison</p>
+<h3>iot-io-companion</h3><p>Remotely call iot-io built-in Arduino like functions and user-defined functions. The function call will be translated to a JSON-RPC request and the iot-io-server will receive the request then call iot-io library natively. </p>
+<p>The target execution environment is companion devices including phone/tablet/pc/etc. This library can run in Nodejs or browser.</p>
+<h3>iot-io-server</h3><p>A <a href="http://json-rpc.org/">JSON-RPC</a> server can expose iot-io's <a href="http://ilc-opensource.github.io/io-js/doc">Arduino like APIs</a> and even user defined functions to remote companion devices.</p>
+<p>Basically its target execution environment is IOT device.</p>
+<h3>autogen</h3><p>It is a Python tool. Its input is standard C header file and its output is the main skeleton of iot-io/iot-io-companion/iot-io-server. When user wants to add C/C++ functions as new interfaces to io-js software stack he doesn��t need to learn any C to JS binding. This tool can help this javascript library adapt to the changes of C/C++ library. </p>
+<h2>Prebuild</h2><p>If you only want to build some of components, please go to the corresponding directory and read the README. Below instruction is about how to build the whole software stack.</p>
+<ul>
+<li><p>Please follow the document <a href="https://communities.intel.com/docs/DOC-22796">Intel Galileo Getting Started</a> to install Yocto on Galileo and boot your board from a SD card</p>
+</li>
+<li><p>Because SD card image doesn��t contain development tools such as gcc, g++ etc, then we have to do cross build. Then please prepare a Linux machine and install below tools.</p>
+</li>
+<li><p>Install node-gyp</p>
+<pre class="prettyprint source lang-shell"><code>sudo npm install -g node-gyp</code></pre></li>
+<li><p>Install cross compiler</p>
+<ul>
+<li><p>The Galileo Arduino IDE has contained a cross compiler, please download the Linux version from https://communities.intel.com/docs/DOC-22226 to your host Linux machine</p>
+</li>
+<li><p>Edit target/device/set_cross_compiler.sh and set <code>ARDUINO_PATH</code> to the right path</p>
+</li>
+<li><p>run the script to set environment values</p>
+<pre class="prettyprint source lang-shell"><code>source target/device/set_cross_compiler.sh</code></pre></li>
+</ul>
+</li>
+<li><p>Optionally install uglify for Javascript library compressing and mangling</p>
+<pre class="prettyprint source lang-shell"><code>sudo npm install uglify-js</code></pre></li>
+<li><p>Optionally install jsdoc for document generation</p>
+<pre class="prettyprint source lang-shell"><code>sudo npm install -g jsdoc</code></pre><h2>Build</h2></li>
+</ul>
+<p>Build with npm and install dependent libraries</p>
+<pre class="prettyprint source lang-shell"><code>npm install</code></pre><h2>Quick Start</h2><h3>Control IO with Javascript on IOT device</h3><p>With iot-io library programmer can develop the program with Javascript to control IO. The API is Arduino like and easy to understand.</p>
+<p>For example we can turn on a LED on digital pin 13 with below file</p>
+<pre class="prettyprint source lang-javascript"><code>var IOLIB = require('iot-io');
+var io = new IOLIB.IO({
+  log: true
+});
 
+io.pinMode(13, io.OUTPUT);
+io.digitalWrite(13, io.HIGH);</code></pre><p>Or you can use high level APIs which have hidden some hardware details. For above example, you can use API of <code>Led</code></p>
+<pre class="prettyprint source lang-javascript"><code>var IOLIB = require('iot-io');
+var io = new IOLIB.IO({
+  log: true
+});
 
-/**
- * @class Led
-   @param {Object}  options - configuration options
-   @param {Object}  options.io - io object created with new IO()
-   @param {Integer} [options.pin=13] - pin number
-   @param {bright}  [options.bright=0] - led brightness
- * Main LED constructor
- */
-var Led = function (options) {
-  if (options === undefined || options.io === undefined)
-    throw new Error('Must supply required options to LED');
-  this.io = options.io;
-  this.pin = options.pin || 0;
-  this.bright = 0;
-  this.io.pinMode(this.pin, this.io.OUTPUT);
-  this.direction = -1;
-}
+var led = new IOLIB.Led({
+  io: io,
+  pin: 13
+});
 
-/** 
- * @function Led.on
- * @type Function
- * @desc Turn on Led
- * @instance
- */
-Led.prototype.on = function () {
-  this.io.digitalWrite(this.pin, this.io.HIGH);
-  this.bright = 255;
-}
+led.on();</code></pre><h3>Remote IO Control</h3><p>We can use all of iot-io APIs as RPC(Remote Procdure call) functions with iot-io-companion. The below code can remotely turn on the LED from another machine. The only difference to above example is we must set extra options to tell where remote RPC server is. Please save below codes to file <code>led_rpc.js</code> on remote PC. The first line is to make sure this library can be loaded in nodejs and browser.</p>
+<pre class="prettyprint source lang-javascript"><code>var IOLIB = (typeof require === 'function') ?
+            require('iot-io-companion'): this.IOLIB;
 
-/**
- * @function Led.off
- * @type Function
- * @desc Turn off Led
- * @instance
- */
-Led.prototype.off = function () {
-  this.io.digitalWrite(this.pin, this.io.LOW);
-  this.bright = 0;
-}
+var io = new IOLIB.IO({
+  log: true,
+  rpc: true,  // turn on rpc call
+  port: 2000, // port of RPC server
+  hostname: '192.168.2.11', //address or machine name of RPC server
+});
 
-/**
- * @function Led.brightLevel
- * @type Function
- * @desc Set Led brightness level
- * @instance
- * @param {Integer} val - Bright less level [0, 15]
- */
-Led.prototype.brightLevel = function(val) {
-  this.io.analogWrite(this.pin, this.bright = val);
-}
+var led = new IOLIB.Led({
+  io: io,
+  pin: 13
+});
 
-/**
- * @function Led.fade
- * @type Function
- * @desc Led dime out
- * @instance
- * @param {Integer} interval - time interval
- */
-Led.prototype.fade = function(interval) {
-  to = (interval || 5000) / (255 * 2);
-  var self = this;
-  setInterval(function() {
-    if(self.bright == 0) direction = 1;
-    if(self.bright == 255) direction = -1;
-    self.brightLevel(self.bright + direction);
-  }, to);
-}
+led.on();</code></pre><p>On IOT device please install and run iot-io-server to expose built-in APIs</p>
+<pre class="prettyprint source lang-shell"><code>npm install -g iot-io-server
+iot-io-server</code></pre><p>Back to your remote machine and run led_rpc.js to turn on the LED on IOT device.</p>
+<pre class="prettyprint source lang-shell"><code>node led_rpc.js</code></pre><h3>Run in Browser</h3><p>The remote control codes can run in browser &amp; nodejs. Because iot-io-companion library for browser is based on jQuery please load jQuery firstly. You can create a HTML file <code>index.html</code> and put it in the directory in which <code>led_rpc.js</code> is.</p>
+<pre class="prettyprint source lang-html"><code>&lt;script src='http://code.jquery.com/jquery-1.11.0.min.js'> &lt;/script>
+&lt;script src='./iot-io-browser-general.js'>&lt;/script>
+&lt;script src='./led_rpc.js'>&lt;/script></code></pre><p>Then you can open <code>led.html</code> in browser and LED on IOT device will be turned on</p>
+<h3>Pack it to mobile APP</h3><p>The above HTML page can be packed to an Android/iOS/WP/Tizen/... application with <a href="http://xdk-software.intel.com/">Intel XDK</a>. You can create a project in XDK and import above index.html with libraries. You can also debug the application with XDK.</p>
+<h3>Expose user defined function</h3><p>The iot-io-server can expose not only built-in APIs but also user defined functions. </p>
+<p>Prepare the file which contains expose candidate. User defined functions are saved in global variable expose��s member: <code>RPC</code>. A global variable <code>isRpcServer</code> can help determine whether this file is opened by iot-io-server.</p>
+<pre class="prettyprint source lang-javascript"><code>var Foo = function(s) {
+  console.log('hello ' + s);
+};
 
-/**
- * @function Led.blink
- * @type Function
- * @desc Led blink 
- * @instance
- * @param {Integer} interval - time interval
- */
-Led.prototype.blink = function (interval) {
-  interval = interval || 1000;
-  var self = this;
-  setInterval(function(){
-    if (self.bright) {
-      self.off()
-    } else {
-      self.on();
-    }
-  }, interval);
-}
+if(isRpcServer) {
+  exports.RPC = {
+    'myFun': Foo
+  };
+}</code></pre><p>Load it with <code>iot-io-server</code></p>
+<pre class="prettyprint source lang-shell"><code>iot-io-server extra.js</code></pre><p>The client side can use exposed function <code>myFun</code> in nodejs or browser after called <code>io.addRpc</code>.</p>
+<pre class="prettyprint source lang-javascript"><code>var IOLIB = (typeof require === 'function') ? 
+            require('iot-io-companion'): this.IOLIB;
 
-exports.Led = Led;
+var io = new IOLIB.IO({
+  rpc: true,
+  port: 2000,
+  hostname: 'localhost',
+});
 
-/////////////////////////////////////////////
-})(typeof exports === 'object'? exports: this.IOLIB, this.IOLIB );
-</code></pre>
-        </article>
+io.addRpc('myFun');
+
+myFun('world'); //will output 'hello world'</code></pre><h3>Add C/C++ function with autogen</h3><p>With autogen tool programmer can easily translate C/C++ function to Javascript functions. Suppose user has a new function <code>myPrint</code> in my_print.cpp</p>
+<pre class="prettyprint source lang-c"><code>void myPrint(char *s) {
+  printf(&quot;hello %s\n&quot;, s);
+}</code></pre><p>In my_print.h the function myPrint is declared as extern</p>
+<pre class="prettyprint source lang-c"><code>extern void myPrint(char *s);</code></pre><p>Go to target/device/libio and put these two files under directory src, then add .cpp file to libio.gyp</p>
+<pre class="prettyprint source lang-javascript"><code>      'extra_srcs' : [
+        '&lt;(extra_dir)/my_print.cpp',
+      ],</code></pre><p>add .h file to export.gyp</p>
+<pre class="prettyprint source lang-javascript"><code>      'export_headers' : [
+        '&lt;(extra_dir)/my_print.h',
+      ],</code></pre><p>Finally go to the root directory and rebuild the whole software stack</p>
+<pre class="prettyprint source lang-shell"><code>cd io-js
+make</code></pre><h2>Arduino like APIs</h2><p>Currently there are more than 100 APIs which are translated from the <a href="https://communities.intel.com/docs/DOC-22226">Intel Galileo Arduino SW</a> with autogen tool. Please read the [API document] (http://ilc-opensource.github.io/io-js/doc) to know more details</p>
+<h2>Test</h2><ul>
+<li>Test functionality with <a href="http://busterjs.org/">buster.js</a></li>
+</ul>
+<pre class="prettyprint source lang-shell"><code>make test</code></pre><ul>
+<li>Test autogen parser</li>
+</ul>
+<pre class="prettyprint source lang-shell"><code>./test_autogen</code></pre><h2>Directories</h2><table>
+<thead>
+<tr>
+<th style="text-align:left">Directory</th>
+<th style="text-align:left">Description</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td style="text-align:left">/target/device</td>
+<td style="text-align:left">iot-io</td>
+</tr>
+<tr>
+<td style="text-align:left">/target/device/libio</td>
+<td style="text-align:left">Arduino library</td>
+</tr>
+<tr>
+<td style="text-align:left">/target/companion</td>
+<td style="text-align:left">iot-io-companion</td>
+</tr>
+<tr>
+<td style="text-align:left">/target/server</td>
+<td style="text-align:left">iot-io-server</td>
+</tr>
+<tr>
+<td style="text-align:left">/target/extension</td>
+<td style="text-align:left">high level APIs for iot-io &amp; iot-io-companion</td>
+</tr>
+<tr>
+<td style="text-align:left">/util/autogen</td>
+<td style="text-align:left">autogen tool</td>
+</tr>
+<tr>
+<td style="text-align:left">/doc</td>
+<td style="text-align:left">documents. This directory will be created by jsdoc</td>
+</tr>
+</tbody>
+</table>
+<h2>License</h2><p>All of components use the BSD license  </p></article>
     </section>
+
 
 
 
@@ -810,7 +890,7 @@ exports.Led = Led;
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha9</a> on Mon Jul 21 2014 17:59:15 GMT+0800 (CST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha9</a> on Tue Jul 22 2014 00:48:42 GMT+0800 (CST)
         </footer>
     </div>
 </div>

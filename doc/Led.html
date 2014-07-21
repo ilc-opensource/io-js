@@ -2,7 +2,7 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Source: companion/index.js</title>
+    <title>Class: Led</title>
     
     
     
@@ -697,196 +697,807 @@
     </ul>
 </div>
     <div class="main">
-        <h1 class="page-title" data-filename="index.js.html">Source: companion/index.js</h1>
+        <h1 class="page-title" data-filename="Led.html">Class: Led</h1>
         
 
 
+
+<section>
     
-    <section>
-        <article>
-            <pre class="prettyprint source"><code>(function(exports, global) {
+<header>
+    <h2>
+    Led
+    </h2>
+    
+</header>  
 
-/**
-  @class IO
-  @param {Object} options 
-  @param {Boolean} [options.log=false] - dump log
-  @param {Boolean} [options.quickInit=true] - quickly init galileo IO
-  @param {Boolean} [options.emu=false] - Run in emulation mode
-  @param {Boolean} [options.fake=false] - alias of options.emu
-  @param {Boolean} [options.rpc=false] - enable RPC client
-  @param {String}  [options.hostname=undefined] - remote RPC server's IP address
-  @param {Integer} [options.port=undefined] - remote RPC server's port
- 
- */
-exports.IO =  function(config) {
+<article>
+    <div class="container-overview">
+    
+    
+    
+        
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="Led">
+            
+            new Led<span class="signature">(options)</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="led.js.html">extension/led.js</a>, <a href="led.js.html#line5">line 5</a>
+        </div>
+        
+    </div>
 
-  var self = this;
+    
+</dt>
+<dd>
+    
+    
 
-  //Initialize default configu
-  config.log = config.log || false;
-  if(config.quickInit == undefined)
-    config.quickInit = true;
+    
+    
+    
+    
+    
+        
 
-  if(!(config.emu || config.fake || config.rpc))
-    throw "only support emu/fake/rpc mode";
-
-  var Board = (typeof require === 'function')? 
-                require(__dirname + '/lib/board/galileo.js').Board
-              : global.Board;
-  var Submit;
-  if(config.emu || config.fake) {
-    Submit = (typeof require === 'function')? 
-               require(__dirname + '/lib/submit/print.js').SubmitPrint
-             : global.SubmitPrint;
-  } else if(config.rpc) { 
-    Submit = (typeof require === 'function')? 
-               require(__dirname + '/lib/submit/rpc.js').SubmitRpc
-             : global.SubmitRpc;
-    config.url = 'http://' + config.hostname + ':' + config.port;     
-  }
-
-  var submit = new Submit(config);
-  
-  Board.call(self, {'submit': submit});   
-
-  self.config(config);
-
-  // initializee ttys, it will effect serial.write/read
-  var ttys = [];
-  if(config.tty != undefined) {
-    ttys[0] = config.tty;
-    ttys[1] = config.tty;
-    ttys[2] = config.tty;
-  } else {
-    ttys = ["/dev/tty", "/dev/tty", "/dev/tty"];
-  }
-
-  if(config.quickInit) {
-    self.initWithTty.apply(self, ttys);
-  }
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>options</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
 
 
-  // add special interfaces for rpc  
-  if(config.rpc) {
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                <p>configuration options</p>
+                
 
-    /**
-     @function IO.offload
-     @type Function
-     @param {Function} func - the function will be offloaded to remote
-     @param {Object} config - configuration
-     @param {Function} callback - the callback function for return value
-     @desc offload a function to remote server. 
-     */
-    self.offload = function(func, config, callback) {
-      self.submit.offloadReq(func, config, callback);
-    };
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		<th>Default</th>
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>io</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Object</span>
 
-    /**
-     @function IO.offloadClear
-     @desc clear all of offloaded function
-     */
-    self.offloadClear = function() {
-      var callback = undefined;
-      var config = null;
 
-      if(arguments.length == 1) {
-        var arg = arguments[0];
-        if(typeof arg === 'object') 
-          config = arg;
-        else if (typeof arg === 'function')
-          callback = arg
-      } else if(arguments.length > 1) {
-        config = arguments[0];
-        callback = arguments[1];
-      }
- 
-      self.submit.offloadClear(config, callback);
-    };
+            
+            </td>
+            
+            
+                <td class="default">
+                
+                </td>
+            
+            
+            <td class="description last">
+                
+                    
+                    
+                        
+                    
+                
+                <p>io object created with new IO()</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>pin</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Integer</span>
 
-    /**
-     @function IO.offloadQuery
-     @desc query the data saved in the remote context
-     @param {Object} options - configuration
-     @param {Function} [callback] - callback functions for queried value
-     */
-    self.offloadQuery = function() {
-      var callback = undefined;
-      var config = null;
 
-      if(arguments.length == 1) {
-        var arg = arguments[0];
-        if(typeof arg === 'object') 
-          config = arg;
-        else if (typeof arg === 'function')
-          callback = arg
-      } else if(arguments.length > 1) {
-        config = arguments[0];
-        callback = arguments[1];
-      }
-      self.submit.offloadQuery(config, callback);
-    };
+            
+            </td>
+            
+            
+                <td class="default">
+                
+                    13
+                
+                </td>
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>pin number</p></td>
+        </tr>
+	
+	
+	
+        <tr>
+            
+                <td class="name"><code>bright</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">bright</span>
 
-    /**
-     @function IO.addRpc
-     @desc add extra customized RPC function
-     @param {String} funcName - function name
-     */
-    self.addRpc = function(funcName) {
-      self[funcName] = function(){
-        self.submit.rpc(arguments, funcName);
-      };
-    };
 
-    /**
-     @function IO.rpc
-     @desc call customized RPC function
-     @param {String} funcName - function name
-     @param {...*} arg - function arguments
-     */
-    self.rpc = function() {
-      self.submit.rpc(arguments);
-    };
-  } else {
-    var unsupport = function() {
-      console.log('Unsupport function ');
-    };
+            
+            </td>
+            
+            
+                <td class="default">
+                
+                    0
+                
+                </td>
+            
+            
+            <td class="description last">
+                
+                    
+                        <span class="optional">optional</span>
+                    
+                    
+                        
+                    
+                
+                <p>led brightness
+Main LED constructor</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+            </td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
 
-    self.offload = unsupport;
-    self.offloadClear = unsupport;
-    self.offloadQuery = unsupport;
-    self.rpc = unsupport;
-    self.addRpc = function(funcName) {
-      self[funcName] = function() {
-        console.log('Unsupport ' + funcName);
-      }
-    };
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
 
-  }
- 
-};
+    
+    
 
-// Merge high level APIs into this interface
-var extension = null;
-if(typeof require === 'function') {
-  var fs = require('fs');
-  if(fs.existsSync(__dirname + '/../extension'))
-    extension = require(__dirname + '/../extension').Extension;
-  else if(fs.existsSync(__dirname + '/extension'))
-    extension = require(__dirname + '/extension').Extension;   
-} else {
-  extension = global.Extension;
-}
+    
 
-if(extension) {
-  var idx;
-  for (idx in extension)
-    exports[idx] = extension[idx];    
-}
+    
+    
+    
+    
+    
+    
+    
+</dd>
 
-})(typeof exports === 'object'? exports: this.IOLIB, this.IOLIB );
-</code></pre>
-        </article>
-    </section>
+    
+    </div>
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+        <h3 class="subsection-title">Methods</h3>
+        
+        <dl>
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="blink">
+            
+            <span class="type-signature static">static</span>Led.blink<span class="signature">(interval)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{function}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="led.js.html">extension/led.js</a>, <a href="led.js.html#line73">line 73</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Led blink</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>interval</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Integer</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                <p>time interval</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="brightLevel">
+            
+            <span class="type-signature static">static</span>Led.brightLevel<span class="signature">(val)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{function}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="led.js.html">extension/led.js</a>, <a href="led.js.html#line45">line 45</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Set Led brightness level</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>val</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Integer</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                <p>Bright less level [0, 15]</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="fade">
+            
+            <span class="type-signature static">static</span>Led.fade<span class="signature">(interval)</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{function}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="led.js.html">extension/led.js</a>, <a href="led.js.html#line56">line 56</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Led dime out</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+        
+
+<table class="params">
+    <thead>
+	<tr>
+		
+		<th>Name</th>
+		
+		
+		<th>Type</th>
+		
+		
+		
+		<th class="last">Description</th>
+	</tr>
+	</thead>
+	
+	<tbody>
+	
+	
+        <tr>
+            
+                <td class="name"><code>interval</code></td>
+            
+            
+            <td class="type">
+            
+                
+<span class="param-type">Integer</span>
+
+
+            
+            </td>
+            
+            
+            
+            <td class="description last">
+                
+                <p>time interval</p></td>
+        </tr>
+	
+	
+	</tbody>
+</table>
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="off">
+            
+            <span class="type-signature static">static</span>Led.off<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{function}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="led.js.html">extension/led.js</a>, <a href="led.js.html#line34">line 34</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Turn off Led</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        
+            
+<dt>
+    <div class="nameContainer">
+        <h4 class="name" id="on">
+            
+            <span class="type-signature static">static</span>Led.on<span class="signature">()</span><span class="glyphicon glyphicon-circle-arrow-right"></span><span class="type-signature returnType">{function}</span>
+        </h4>
+    
+        
+        <div class="tag-source">
+            <a href="led.js.html">extension/led.js</a>, <a href="led.js.html#line23">line 23</a>
+        </div>
+        
+    </div>
+
+    
+</dt>
+<dd>
+    
+    
+    <div class="description">
+        <p>Turn on Led</p>
+    </div>
+    
+
+    
+    
+    
+    
+    
+    
+    
+<dl class="details">
+    
+        
+    
+    
+    
+
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+</dl>
+
+    
+    
+
+    
+
+    
+    
+    
+    
+    
+    
+    
+
+
+    
+    
+    
+</dd>
+
+        </dl>
+    
+    
+    
+    
+    
+</article>
+
+</section>  
 
 
 
@@ -895,7 +1506,7 @@ if(extension) {
         
 
         <footer>
-            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha9</a> on Mon Jul 21 2014 17:59:15 GMT+0800 (CST)
+            Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.3.0-alpha9</a> on Tue Jul 22 2014 00:48:42 GMT+0800 (CST)
         </footer>
     </div>
 </div>
