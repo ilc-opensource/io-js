@@ -22,7 +22,7 @@ The target execution environment is companion devices including phone/tablet/pc/
  
 ### iot-io-server
 
-A [JSON-RPC]( http://json-rpc.org/) server can expose iot-io¡¯s APIs and even user defined functions to remote companion devices. 
+A [JSON-RPC]( http://json-rpc.org/) server can expose iot-io's [Arduino like APIs](http://ilc-opensource.github.io/io-js/doc) and even user defined functions to remote companion devices.
 
 Basically its target execution environment is IOT device.
 
@@ -232,7 +232,7 @@ make
 ```
 ## Arduino like APIs
 
-Currently there are more than 100 APIs which are translated from the [Intel Galileo Arduino SW]( https://communities.intel.com/docs/DOC-22226) with autogen tool. Please read the [API document] ( http://ilc-opensource.github.io/io-js/doc) to know more details
+Currently there are more than 100 APIs which are translated from the [Intel Galileo Arduino SW]( https://communities.intel.com/docs/DOC-22226) with autogen tool. Please read the [API document] (http://ilc-opensource.github.io/io-js/doc) to know more details
 
 ## Test
 
