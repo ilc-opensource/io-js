@@ -31,11 +31,16 @@ If you don't install gcc on Galileo or just want a much faster compilation, plea
 
 * The Galileo Arduino IDE has contained a cross compiler, please download the Linux version from https://communities.intel.com/docs/DOC-22226 to your host Linux machine
 
-* Make sure node-gyp is installed. If not install it with npm
+* Install [node-gyp](https://github.com/TooTallNate/node-gyp). Please notice node-gyp will detect the version of local nodejs and automatically download some header files and libraries for compilation. Then please make sure the version of nodejs on host machine is the same as which of nodejs on Galileo. If you do not want to the keep the nodejs version. You can manually open ./Makefile and added the version of target nodejs on Galileo.
 
-```shell
-sudo npm install -g node-gyp
+```makefile
+rebuild:
+    node-gyp rebuild --arch=ia32 --target=0.x.x
+
+configure:
+    node-gyp configure  --arch=ia32 --target=0.x.x
 ```
+
 
 * Set cross compiler environment. Save below script as `set_cross_compiler.sh` and change ARDUINO_PATH to correct path
 
