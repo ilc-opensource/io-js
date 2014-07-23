@@ -84,10 +84,14 @@
 
 <ul>
 <li><p>Please follow the document <a href="https://communities.intel.com/docs/DOC-22796">Intel Galileo Getting Started</a> to install Yocto on Galileo and boot your board from a SD card</p></li>
-<li><p>Because SD card image doesn¡¯t contain development tools such as gcc, g++ etc, then we have to do cross build. Then please prepare a Linux machine and install below tools.</p></li>
-<li><p>Install node-gyp</p></li>
-</ul><pre lang="shell"><code>sudo npm install -g node-gyp
-</code></pre>
+<li><p>Because SD card image does not contain development tools such as gcc, g++ etc, then we have to do cross build. Then please prepare a Linux machine and install below tools. </p></li>
+<li><p>Install <a href="https://github.com/TooTallNate/node-gyp">node-gyp</a>. Please notice node-gyp will detect the version of local nodejs and automatically download some header files and libraries for compilation. Then please make sure the version of nodejs on host machine is the same as which of nodejs on Galileo. If you do not want to the keep the nodejs version. You can manually open target/device/Makefile and added the version of target nodejs on Galileo.</p></li>
+</ul><div class="highlight highlight-makefile"><pre><span class="nf">rebuild</span><span class="o">:</span>
+    node-gyp rebuild --arch<span class="o">=</span>ia32 --target<span class="o">=</span>0.x.x
+
+<span class="nf">configure</span><span class="o">:</span>
+    node-gyp configure  --arch<span class="o">=</span>ia32 --target<span class="o">=</span>0.x.x
+</pre></div>
 
 <ul>
 <li>
@@ -99,7 +103,7 @@
 <li><p>run the script to set environment values</p></li>
 </ul>
 </li>
-</ul><pre lang="shell"><code>    source target/device/set_cross_compiler.sh
+</ul><pre lang="shell"><code>source target/device/set_cross_compiler.sh
 </code></pre>
 
 <ul>
