@@ -14,7 +14,7 @@ def GetJsDocType(var, isResult):
       or (GetIdenticalType(var["type"]) == "char" and var["array"] == 1)):
       if isResult:
         JsDocType = "String"
-      else:  
+      else:
         JsDocType = "Array|String|Object"
     elif isinstance(var["function_pointer"], dict) and var["function_pointer"] != {}:
       JsDocType = ""
@@ -27,9 +27,6 @@ def GetJsDocType(var, isResult):
         JsDocType = "Callback_%d" %globalVar.CallBackJsDocTypesCnt
         globalVar.CallBackJsDocTypesCnt = globalVar.CallBackJsDocTypesCnt + 1
         globalVar.CallBackJsDocTypesHT[JsDocType] = var["function_pointer"]
-        print var["function_pointer"]
-        print "globalVar.CallBackJsDocTypesHT"
-        print globalVar.CallBackJsDocTypesHT
     else:
       JsDocType = "Array"
   else:
@@ -62,7 +59,7 @@ def GenCallBackJsDocType(FPName, FPTypes):
 ''' %(FPName)
   for paraT in paraTypes:
     if GetNoQualifierType(paraT["type"]) == "void" \
-	and paraT["pointer"] == 0 and paraT["array"] == 0:
+       and paraT["pointer"] == 0 and paraT["array"] == 0:
       s += " * @param {Void}\n"
       continue
     s += " * @param {%s}\n" %(GetJsDocType(paraT, False))
@@ -80,8 +77,6 @@ def GenTypedefCallBackJsDocTypesHT():
 
 def GenCallBackJsDocTypes():
   s = ""
-  print "globalVar.CallBackJsDocTypesHT"
-  print globalVar.CallBackJsDocTypesHT
   for key in globalVar.TypedefCallBackJsDocTypesHT.keys():
     jsDocType = globalVar.TypedefCallBackJsDocTypesHT[key][0]
     types = globalVar.TypedefCallBackJsDocTypesHT[key][1]
@@ -94,7 +89,10 @@ def GenCallBackJsDocTypes():
 
 def GenParamJsDoc(param, paramName):
   jsDocType = GetJsDocType(param, False)
-  return "\n * @param {%s} %s" %(jsDocType, paramName)
+  if param.has_key("default"):
+    return "\n * @param {%s} [%s=%s]" %(jsDocType, paramName, param["default"])
+  else:
+    return "\n * @param {%s} %s" %(jsDocType, paramName)
 
 def GenFuncParamsJsDoc(func):
   s = ""
@@ -102,24 +100,34 @@ def GenFuncParamsJsDoc(func):
     idx = 0
     while (1):
       paramJsDocType = []
-      paramLen = 0
+      defaultValues = []
+      defaultValueNum = 0
+      requiredParamNum = 0
       funcNum = len(func["funcs"])
       for f in func["funcs"]:
         params = f["parameters"]
         if f["destructor"] or not CheckSanity(f):
           funcNum = funcNum - 1
           continue
-        if len(params) <= idx:
-          continue
-        if GetIdenticalType(params[idx]["type"]) == "void" \
-	   and params[idx]["pointer"] == 0 and params[idx]["array"] == 0:
-          continue
-        jsDocType = GetJsDocType(params[idx], False)
-        paramLen = paramLen + 1
-        if jsDocType not in paramJsDocType:
-          paramJsDocType.append(jsDocType)
 
-      if paramJsDocType == []:
+        if len(params) <= idx or \
+            (GetIdenticalType(params[idx]["type"]) == "void" \
+              and params[idx]["pointer"] == 0 and params[idx]["array"] == 0):
+          paramJsDocType.append("None")
+          defaultValues.append("None")
+          continue
+
+        jsDocType = GetJsDocType(params[idx], False)
+        paramJsDocType.append(jsDocType)
+
+        if params[idx].has_key("default"):
+          defaultValues.append(params[idx]["default"])
+          defaultValueNum += 1
+        else:
+          defaultValues.append("None")
+          requiredParamNum += 1
+
+      if requiredParamNum == 0 and defaultValueNum == 0:
           break
 
       s += "\n * @param {"
@@ -128,24 +136,32 @@ def GenFuncParamsJsDoc(func):
         if i != len(paramJsDocType) - 1:
           s += "|"
       s += "}"
-      if paramLen != funcNum:
-        s += " [arg%d]" %(idx)
+      if requiredParamNum != funcNum:
+        if defaultValueNum == 0:
+          s += " [arg%d]" %(idx)
+        else:
+          s += " [arg%d=" %(idx)
+          for j, val in enumerate(defaultValues):
+            s += val
+            if j != len(defaultValues) - 1:
+              s += "|"
+          s += "]"
       else:
         s += " arg%d" %(idx)
       idx = idx + 1
   else:
     if len(func["parameters"]) == 0:
       s += "\n * @param {Void}"
-    
+
     for idx, param in enumerate(func["parameters"]):
       if GetIdenticalType(param["type"]) == "void":
-      	s += "\n * @param {Void}"
+        s += "\n * @param {Void}"
         continue
-         
+
       paramName = param["name"]
       if paramName == "":
          paramName = "arg%d" %(idx)
-      
+
       s += GenParamJsDoc(param, paramName)
   return s
 

@@ -113,15 +113,17 @@ def GenArgCheck(arg, argName):
   s = "%s->%s()" % (argName, typeCheck)
   return s
 
-def GenArgsCheckExpress(func) :
+def GenRequiredArgsCheckExpress(func) :
   s =""
   args = func["parameters"]
-  for idx, arg in enumerate(args):
+  num = GetRequiredParamNums(func)
+  for idx in range(num):
+    arg = args[idx]
     if arg["type"] == "void":
       continue
     s += GenArgCheck(arg, GenArgArrayName(idx))
 
-    if idx != (len(args) - 1):
+    if idx != (num - 1):
       s += " && "
 
   return s
@@ -747,7 +749,7 @@ def GenArgTrans(arg, idx, argCName, argV8Name, needNewTargName):
 
 def GenArgsCheck(func):
   s = ""
-  t = GenArgsCheckExpress(func)
+  t = GenRequiredArgsCheckExpress(func)
   if len(t) != 0:
     s += \
 '''
@@ -756,9 +758,11 @@ V8_ASSERT(%s, "parameters error!");
   return s
 
 
-def GenArgsTrans(func):
+def GenArgsCheckAndTrans(func, isGenRequiredArgCheck):
   args = func["parameters"]
   s = ""
+
+  requiredParamNum = GetRequiredParamNums(func)
 
   for idx, arg in enumerate(args):
 
@@ -774,9 +778,28 @@ def GenArgsTrans(func):
     argCName = GenArgName(idx, arg)
     argV8Name = GenArgArrayName(idx)
 
-    s += GenArgTrans(arg, idx, argCName, argV8Name, True)
-    s += "\n"
+    if idx < requiredParamNum:
+      if isGenRequiredArgCheck:
+        s += '''
+V8_ASSERT(%s, "args[%s] parameters error!");
+'''%(GenArgCheck(arg, GenArgArrayName(idx)), idx)
+      s += GenArgTrans(arg, idx, argCName, argV8Name, True)
+    else:
+      s += \
+'''%s %s;
+if (args.Length() > %s) {
+    V8_ASSERT(%s, "args[%s] parameters error!");
+%s
+} else {
+    %s = %s;
+}
+''' %(GetNoQualifierType(arg["type"]), argCName, \
+      idx, \
+      GenArgCheck(arg, GenArgArrayName(idx)), idx, \
+      AddIndent(GenArgTrans(arg, idx, argCName, argV8Name, False), 4), \
+      argCName, arg["default"])
 
+    s += "\n"
   return s
 
 def GenCall(func):
@@ -1184,7 +1207,7 @@ def GenOverride(className, func):
     return ""
 
   s = GenMethodHead(className, func)
-
+   
   for f in func["funcs"]:
     if not CheckSanity(f):
       thisSummary["failFuncs"].append(head + f["name"])
@@ -1193,20 +1216,20 @@ def GenOverride(className, func):
 
     thisSummary["succFuncs"].append(head + f["name"])
 
-    temp  =  GenArgsTrans(f)
+    temp  =  GenArgsCheckAndTrans(f, False)
     temp +=  GenMethodCall(f, className)
-    argCheck = GenArgsCheckExpress(f);
+    argCheck = GenRequiredArgsCheckExpress(f);
     andStr = ""
     if (len(argCheck) > 0) :
       andStr = " && "
     s += \
 '''
     %s
-    if ((args.Length() == %d)%s%s) {
+    if ((args.Length() >= %d)%s%s) {
 %s
     }
 ''' %(GetFuncDesc(f), \
-      len(f["parameters"]), andStr, argCheck, \
+      GetRequiredParamNums(f), andStr, argCheck, \
       AddIndent(temp, 8))
 
   s += '''
@@ -1237,8 +1260,8 @@ def GenMethod(className, func):
 
   thisSummary["succFuncs"].append(head + func["name"])
   s = GenMethodHead(className, func)
-  s += AddIndent(GenArgsCheck(func), 4)
-  s += AddIndent(GenArgsTrans(func), 4)
+#  s += AddIndent(GenArgsCheck(func), 4)
+  s += AddIndent(GenArgsCheckAndTrans(func, True), 4)
   s += AddIndent(GenMethodCall(func, className), 4)
   s += "\n}"
   return s
@@ -1310,13 +1333,13 @@ def GenFuncNewContent(func):
 
   className = func["name"]
   classNameV8 = GetV8ClassName(func["name"])
-  argCheck = GenArgsCheckExpress(func)
+  argCheck = GenRequiredArgsCheckExpress(func)
   andStr = ""
   if (len(argCheck) > 0) :
     andStr = " && "
 
   s ='''
-if ((args.Length() == %d)%s%s) {
+if ((args.Length() >= %d)%s%s) {
     if (args.IsConstructCall()) {
         // Invoked as constructor: `new %s(...)`
 %s
@@ -1334,9 +1357,9 @@ if ((args.Length() == %d)%s%s) {
         Local<Value> argv[argc] = { %s };
         return scope.Close(constructor->NewInstance(argc, argv));
     }
-}'''%(len(func["parameters"]), andStr, argCheck, \
+}'''%(GetRequiredParamNums(func), andStr, argCheck, \
         classNameV8, \
-        AddIndent(GenArgsTrans(func), 8), \
+        AddIndent(GenArgsCheckAndTrans(func, False), 8), \
         className, className, GenArgList(func, False), \
         classNameV8, classNameV8,
         classNameV8,\
@@ -1354,6 +1377,18 @@ Handle<Value> %s::New(const Arguments& args) {
     HandleScope scope;
 '''%(v8ClassName, v8ClassName)
 
+  s += \
+'''
+    if ((args.Length() == 1) && args[0]->IsString()) {
+        v8::String::AsciiValue arg0(args[0]->ToString());
+        if (strcmp(*arg0, "%s") == 0) {
+            %s *objV8 = new %s();
+            objV8->Wrap(args.This());
+            return args.This();
+        }
+    }
+''' %(INSTANCE_V8CLASS_ARG, v8ClassName, v8ClassName)
+
   funcs = c["methods"]["public"]
   for func in funcs:
     if func["override"] and (func["name"] == className):
@@ -1364,17 +1399,10 @@ Handle<Value> %s::New(const Arguments& args) {
       s += AddIndent(GenFuncNewContent(func), 4);
 
   s += \
-'''else if ((args.Length() == 1) && args[0]->IsString()) {
-        v8::String::AsciiValue arg0(args[0]->ToString());
-        if (strcmp(*arg0, "%s") == 0) {
-            %s *objV8 = new %s();
-            objV8->Wrap(args.This());
-            return args.This();
-        }
-    }
+'''
     V8_ASSERT(false, "parameters error!");
 }
-''' %(INSTANCE_V8CLASS_ARG, v8ClassName, v8ClassName)
+'''
   return s
 
 def CheckVritualFunc(funcs):
@@ -1474,11 +1502,13 @@ def GroupFunc(funcs):
       funcs.append(g[0])
 
     if len(g) > 1:
+      g.sort(key=GetRequiredParamNums, reverse=True)
       funcs.append({ \
         "name": g[0]["name"], \
         "funcs": g, \
         "override": True \
         })
+
 
 def GenModuleDecl(module, cppHeader):
   s = GetComment();
