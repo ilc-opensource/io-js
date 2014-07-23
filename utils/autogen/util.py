@@ -488,6 +488,14 @@ def FixEnumPropType(cppHeader):
         if enum["name"] == t:
           cppHeader.classes[c]["properties"]["public"][idx]["type"] = "enum " + t
 
+def GetRequiredParamNums(func):
+  num = 0
+  for param in func["parameters"]:
+    if param.has_key("default"):# and param["defalut"] != "":
+      break;
+    num = num + 1
+  return num
+
 def mkdir(path):
     path=path.strip()
     path=path.rstrip("\\")

@@ -36,11 +36,11 @@ exports.testCommon = function() {
   if (ll != 0xab00000000)
     throw Error("Failed!!!");
 
-  ul = io.funcul(0xabcd123456, 0x123456);
+  ul = io.funcul(0xcd123456, 0x123456);
   if (ul != 0x00000000cd000000)
     throw Error("Failed!!!");
 
-  l = io.funcl(0xab11111111, 0x0012345678);
+  l = io.funcl(0x11111111, 0x0012345678);
   if (l != 0x23456789)
     throw Error("Failed!!!");
 
