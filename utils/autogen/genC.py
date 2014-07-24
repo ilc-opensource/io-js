@@ -712,7 +712,12 @@ V8_ASSERT(!%s->IsNull() && %s, "%s.%s parameter error");
 '''%s.%s = new %s[sizeof(%s)/sizeof(%s[0])];
 ''' %(argCName, fldName, fldBasicType, fldCName, fldCName)
 
-        s += \
+        if GetIdenticalType(fldBasicType) == "char":
+          s += \
+'''strcpy(%s.%s, %s);
+''' %(argCName, fldName, fldCName)
+        else:
+          s += \
 '''memcpy(%s.%s, %s, sizeof(%s));
 ''' %(argCName, fldName, fldCName, fldCName)
       else:
