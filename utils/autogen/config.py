@@ -1,5 +1,5 @@
 INPUT_DECL_PATHS  = [
-  "../../target/device/libio/export"
+  "../../../mug/include"
 #   "../../../pia-sdk-repo/iolib/arduino/arduiPIA.h"
 ]
 
@@ -19,6 +19,8 @@ EXPORT_MODULE        = 'galileo'
 
 GYP_PATH             = OUTPUT_DEV_PATH + '/../'
 GYP_SRC_PATH         = 'src/' #the relative path of GYP_SRC_PATH to OUTPUT_DEV_PATH from 
+GYP_LIB              = "'../../../../mug/bin/libmug.a'"
+GYP_INC              = ""
 GYP_FILE             = 'binding.gyp'
 Global_CLASS_VAR_FILE    = 'globalClassVarSetterGetter.js'
 INSTANCE_V8CLASS_ARG     = '__instanceV8' # used to generate a V8 class Object without

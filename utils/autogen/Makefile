@@ -5,4 +5,5 @@ run:
 
 clean:
 	rm -f `find . -name "*.pyc"`
+	rm -f $(OUTPUT_FILES)
 	rm -rf $(OUTPUT_DIRS)

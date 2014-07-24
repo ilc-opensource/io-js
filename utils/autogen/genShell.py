@@ -15,6 +15,10 @@ def GenShell():
   printDbg("generating " + f)
   fp = open(f, "w+")
   s = '''
-OUTPUT_DIRS = %s %s
-''' % (GenOutputDirs(), INC_MAKEFILE)
+OUTPUT_DIRS = %s
+''' % (GenOutputDirs())
+
+  s += '''
+OUTPUT_FILES = %s %s %s
+''' % (GYP_PATH + GYP_FILE, GYP_PATH + Global_CLASS_VAR_FILE, INC_MAKEFILE)
   fp.write(s)
