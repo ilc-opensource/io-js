@@ -4,35 +4,33 @@ from termcolor import colored
 import globalVar
 import os
 
-CURR_MODULE = "-"
+currModule = "-"
 
 summary = {}
 
 def SetPrintModule(m):
-  global CURR_MODULE
-  CURR_MODULE = m
+  globalVar.currModule = m
 
 def UnsetPrintModule():
-  global CURR_MODULE
-  CURR_MODULE = "-"
+  globalVar.currModule = "-"
 
 def printDbg(str):
   if not DEBUG:
     return
 
-  print colored("[%s][dbg] " % CURR_MODULE + str, "blue")
+  print colored("[%s][dbg] " % globalVar.currModule + str, "blue")
 
 def printLog(str):
   print colored(str, "green")
 
 def printVerb(str):
-  print "[%s][veb] " % CURR_MODULE + str
+  print "[%s][veb] " % globalVar.currModule + str
 
 def printWarn(str):
-  print colored("[%s][warn] " % CURR_MODULE + str, "yellow")
+  print colored("[%s][warn] " % globalVar.currModule + str, "yellow")
 
 def printErr(str):
-  print colored("[%s][err] " % CURR_MODULE + str, "red")
+  print colored("[%s][err] " % globalVar.currModule + str, "red")
 
 
 reFloat = re.compile('[-+]?[1-9]\d*\.\d*[fF]?|-?0\.\d*[1-9]\d*[fF]?')
@@ -220,7 +218,10 @@ def CheckArrayArgSanity(arg):
     return CheckCommonArgSanity(argBasicType)
 
 def CheckEnumArgSanity(arg):
-  return True
+  if IsEnumArg(arg["type"]):
+    return True
+  else:
+    return False
 
 # check sanity of struct
 def CheckStructArgSanity(arg):
@@ -238,11 +239,13 @@ def CheckStructArgSanity(arg):
 def CheckFPArgSanity(arg):
   # only transform simple func pointer
   if not CheckCommonArgSanity(arg["function_pointer"]["rtnType"]["type"]) \
-    and not CheckArrayArgSanity(arg["function_pointer"]["rtnType"]) :
+    and not CheckArrayArgSanity(arg["function_pointer"]["rtnType"]) \
+    and not CheckEnumArgSanity(arg["function_pointer"]["rtnType"]):
     return False
   for argT in arg["function_pointer"]["paraTypes"]:
     if not CheckCommonArgSanity(argT["type"]) \
-      and not CheckArrayArgSanity(argT):
+      and not CheckArrayArgSanity(argT) \
+      and not CheckEnumArgSanity(argT):
       return False
   return True
 
@@ -270,6 +273,7 @@ def CheckArgSanity(arg, convertFP, convertClass):
   elif IsClassArg(argBasicType):
     return convertClass
   elif (IsStructArg(argBasicType)):
+    printDbg("Is struct Arg")
     return CheckStructArgSanity(arg)
   elif (IsEnumArg(argBasicType)):
     return CheckEnumArgSanity(arg)
@@ -406,11 +410,15 @@ def GetTypedefVal(argType):
 
 def ExpandArgTypedef(arg):
   argType = arg["type"]
-  typedefVal = GetTypedefVal(argType)
+  argBasicType = GetBasicType(arg)
+  
+  typedefVal = GetTypedefVal(argBasicType)
   if typedefVal != {}:
     if typedefVal["function_pointer"] == 1:
       arg["function_pointer"] = typedefVal["type"]
       arg["pointer"] = 1
+    elif arg["pointer"] == 1:
+      arg["type"] = typedefVal["type"] + "*"
     else:
       arg["type"] = typedefVal["type"]
 

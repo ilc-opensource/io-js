@@ -491,6 +491,7 @@ def GenFPArgTran(arg, idx, argCName, argV8Name, needNewTargName):
   argCName, cnt)
   globalVar.FuncPointerHashtable[cnt] = arg["function_pointer"]
   globalVar.FuncPointerCnt += 1
+  globalVar.FuncPointerIncludeFiles.append(globalVar.currModule)
   return s
 
 def GenStringArgTran(arg, idx, argCName, argV8Name, needNewTargName):
@@ -1779,7 +1780,16 @@ Persistent<Object> JSObj;
 #include <map>
 #include <node.h>
 #include <v8.h>
+''' % (m, m)
+  
+  includeFiles = list(set(globalVar.FuncPointerIncludeFiles))
+  for f in includeFiles:
+    s += \
+'''
+#include "%s"''' %(f)
 
+  s += \
+'''
 using namespace v8;
 
 #ifndef V8_EXCEPTION
@@ -1797,7 +1807,8 @@ using namespace v8;
     }
 #endif
 
-''' % (m, m)
+'''
+
   s += \
 '''extern Persistent<Function> cbArray[%d];
 
