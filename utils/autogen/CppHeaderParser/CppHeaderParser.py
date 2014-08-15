@@ -2324,7 +2324,7 @@ class CppHeader( _CppHeader ):
 
         #if 'typedef' in self.nameStack: self.evaluate_typedef()        # allows nested typedefs, probably a bad idea
         # Handle typedef struct/union
-        if ('typedef' in self.nameStack) and (self.nameStack[1] in ["struct", "union"]):
+        if ('typedef' in self.nameStack) and (self.nameStack[1] in ["struct", "union"] and len(self.nameStack) != 4):
             debug_print( "trace" )
             self.evaluate_class_stack()
 

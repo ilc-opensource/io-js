@@ -28,7 +28,7 @@ Basically its target execution environment is IOT device.
 
 ### autogen
 
-It is a Python tool. Its input is standard C header file and its output is the main skeleton of iot-io/iot-io-companion/iot-io-server. When user wants to add C/C++ functions as new interfaces to io-js software stack he doesn¡¯t need to learn any C to JS binding. This tool can help this javascript library adapt to the changes of C/C++ library. 
+It is a Python tool. Its input is standard C header file and its output is the main skeleton of iot-io/iot-io-companion/iot-io-server. When user wants to add C/C++ functions as new interfaces to io-js software stack he doesn't need to learn any C to JS binding. This tool can help this javascript library adapt to the changes of C/C++ library. 
 
 ## Prebuild
 
@@ -60,7 +60,7 @@ source target/device/set_cross_compiler.sh
 
 * Optionally install uglify for Javascript library compressing and mangling
 ```shell
-sudo npm install uglify-js
+sudo npm install -g uglify-js
 ```
 
 * Optionally install jsdoc for document generation
@@ -143,7 +143,7 @@ node led_rpc.js
 
 ### Run in Browser
 
-The remote control codes can run in browser & nodejs. Because iot-io-companion library for browser is based on jQuery please load jQuery firstly. You can create a HTML file `index.html` and put it in the directory in which `led_rpc.js` is.
+The remote control codes can run in browser & nodejs. Because iot-io-companion library for browser is based on jQuery please load jQuery firstly. You can create a HTML file `led_rpc.html` and put it in the directory in which `led_rpc.js` is.
 
 ```html
 <script src='http://code.jquery.com/jquery-1.11.0.min.js'> </script>
@@ -151,7 +151,7 @@ The remote control codes can run in browser & nodejs. Because iot-io-companion l
 <script src='./led_rpc.js'></script>
 ```
 
-Then you can open `led.html` in browser and LED on IOT device will be turned on
+Then you can open `led_rpc.html` in browser and LED on IOT device will be turned on
 
 ### Pack it to mobile APP
 
@@ -161,7 +161,7 @@ The above HTML page can be packed to an Android/iOS/WP/Tizen/... application wit
 
 The iot-io-server can expose not only built-in APIs but also user defined functions. 
 
-Prepare the file which contains expose candidate. User defined functions are saved in global variable expose¡¯s member: `RPC`. A global variable `isRpcServer` can help determine whether this file is opened by iot-io-server.
+Prepare the file which contains expose candidate. User defined functions are saved in global variable expose's member: `RPC`. A global variable `isRpcServer` can help determine whether this file is opened by iot-io-server.
 
 ```javascript
 var Foo = function(s) {

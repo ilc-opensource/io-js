@@ -5,4 +5,8 @@ console.log("Test Autogen Start!!!")
 var tu = require("./test_failed/unsigned_failed");
 tu.testUnsignedFailed()
 
+// Global Variable Value error In C code.
+var tu = require("./test_failed/funcPoint_failed");
+tu.testFuncPointerFailed()
+
 console.log("Test Autogen Passed!!!")
