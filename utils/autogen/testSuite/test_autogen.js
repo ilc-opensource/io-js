@@ -27,4 +27,7 @@ ts.testStruct();
 var tfp = require("./test_fp/funcPoint");
 tfp.testFuncPointer();
 
+var tfp1 = require("./test_fp/mug");
+tfp1.testFuncPointerStruct();
+
 console.log("Test Autogen Passed!!!")

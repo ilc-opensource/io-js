@@ -52,8 +52,8 @@ FILES="
   $ROOT/target/companion/index.js
   $ROOT/target/extension/led.js
   $ROOT/target/extension/index.js
-  $ROOT/target/index.js
 "
+#  $ROOT/target/index.js
 
 echo ""
 echo "put below files into $TARGET_DIR/$OUTPUT"
