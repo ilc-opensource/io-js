@@ -238,14 +238,10 @@ def CheckStructArgSanity(arg):
 # check sanity of function pointer
 def CheckFPArgSanity(arg):
   # only transform simple func pointer
-  if not CheckCommonArgSanity(arg["function_pointer"]["rtnType"]["type"]) \
-    and not CheckArrayArgSanity(arg["function_pointer"]["rtnType"]) \
-    and not CheckEnumArgSanity(arg["function_pointer"]["rtnType"]):
+  if not CheckArgSanity(arg["function_pointer"]["rtnType"], False, False):
     return False
   for argT in arg["function_pointer"]["paraTypes"]:
-    if not CheckCommonArgSanity(argT["type"]) \
-      and not CheckArrayArgSanity(argT) \
-      and not CheckEnumArgSanity(argT):
+    if not CheckArgSanity(argT, False, False):
       return False
   return True
 

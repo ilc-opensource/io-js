@@ -1643,21 +1643,38 @@ def GenCallbackFuncs():
       if paraT["type"] == "void":
         continue
       paraT["array"] = 0
-      s += AddIndent(GenFuncReturn(paraT, idx, "arg%d"%idx, "argv[%s]" %idx, False), 4)
+      s += AddIndent(GenFuncReturn(paraT, idx, "arg%d"%(idx), "argv[%s]" %(idx), False), 4)
+    
+
+    argRtnStr = ""
+    for idx, paraT in enumerate(paraTypes):
+      if paraT["pointer"] != 1 and paraT["array"] != 1:
+        continue
+  
+      if (paraT["function_pointer"] != {} and \
+          paraT["function_pointer"] != 0) :
+        continue
+  
+      argRtnStr += GenArgTrans(paraT, idx, "arg%d" %(idx), "argv[%s]" %(idx), False)
+
     if rtnType == "void":
       s += \
 '''
     cbArray[%d]->Call(Context::GetCurrent()->Global(), argc, argv);
+    
+%s
 
-    return;'''%(key)
+    return;''' %(key, AddIndent(argRtnStr, 4))
     else:
       s += \
 '''
     Local<Value> ret = cbArray[%d]->Call(Context::GetCurrent()->Global(), argc, argv);
 
 %s
+%s
     return retC;
 ''' %(key, \
+      AddIndent(argRtnStr, 4), \
       AddIndent(GenArgTrans(types["rtnType"], "", "retC", "ret", True), 4))
 
     s += \
@@ -1777,6 +1794,7 @@ Persistent<Object> JSObj;
 '''#ifndef %s
 #define %s
 
+#include <string.h>
 #include <map>
 #include <node.h>
 #include <v8.h>
