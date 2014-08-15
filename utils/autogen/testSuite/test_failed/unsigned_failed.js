@@ -17,7 +17,7 @@ exports.testUnsignedFailed = function() {
   u = io.getGueV8();
   // if (u != -1466953164)
   if (u != 2828014132)
-    throw Error("Test unsigned global variable Failed!!!");
+    console.log("Error:Test unsigned global variable Failed!!!");
 
   console.log("Test unsigned global variable Passed!!!");
 }
