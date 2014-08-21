@@ -1,5 +1,5 @@
 INPUT_DECL_PATHS  = [
-  "../../../sdk_c/include"
+  "../../../sdk_c/include/mug.h"
 #   "../../../pia-sdk-repo/iolib/arduino/arduiPIA.h"
 ]
 
