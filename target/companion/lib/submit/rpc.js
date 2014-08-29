@@ -17,6 +17,14 @@
       return defaultCallback;
   }
 
+  var parseRet = function(ret) {
+    if(ret != undefined && ret.result != undefined) {
+      return eval('(' + ret.result + ')');
+    }
+
+    return ret;
+  }
+
   Submit.prototype.config = function(options) {
 
     var self = this;	  
@@ -138,7 +146,7 @@
       callback(error, response);
     });
 
-    return ret;
+    return parseRet(ret);
   };
 
 
@@ -158,6 +166,8 @@
       ret = response;
       callback(error, response);
     });
+
+    return parseRet(ret);
   };
 /*
   Submit.prototype.funcReq = function(funcName, args) {
