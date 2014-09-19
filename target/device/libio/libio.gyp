@@ -13,7 +13,6 @@
       'core_srcs'   : [
         '<(core_dir)/fast_gpio_sc.c',
         '<(core_dir)/i2c.c',
-        '<(core_dir)/interrupt.c',
         '<(core_dir)/mux.c',
         '<(core_dir)/sysfs.c',
         '<(core_dir)/wiring_analog.c',
@@ -49,6 +48,7 @@
       'extra_srcs' : [
         '<(extra_dir)/OSAbstract_norm.cpp',
         '<(extra_dir)/version.cpp',
+        '<(extra_dir)/interrupt_norm.cpp',
       ],
     },
 
