@@ -19,7 +19,7 @@ EXPORT_MODULE        = 'galileo'
 
 GYP_PATH             = OUTPUT_DEV_PATH + '/../'
 GYP_SRC_PATH         = 'src/' #the relative path of GYP_SRC_PATH to OUTPUT_DEV_PATH from 
-GYP_LIB              = "'../../../../sdk_c/bin/libmug.a'"
+GYP_LIB              = "'../../../../sdk_c/bin/libmug.a', '../../../../sdk_c/lib/freetype2/bin/libfreetype.a' "
 GYP_INC              = ""
 GYP_FILE             = 'binding.gyp'
 Global_CLASS_VAR_FILE    = 'globalClassVarSetterGetter.js'
