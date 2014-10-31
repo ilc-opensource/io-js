@@ -4,6 +4,7 @@ import os
 import globalVar
 
 def GetJsDocType(var, isResult):
+  JsDocType = "Unknown"
   varBasicType = GetBasicType(var)
   if IsStructArg(varBasicType) or IsClassArg(varBasicType):
     JsDocType = "Object"
