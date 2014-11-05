@@ -18,7 +18,6 @@
         '<(core_dir)/UtilTime.h',
         '<(core_dir)/fast_gpio_sc.h',
         '<(core_dir)/i2c.h',
-        '<(core_dir)/interrupt.h',
         '<(core_dir)/sysfs.h',
 
         '<(variant_dir)/pins_arduino.h',
@@ -28,6 +27,7 @@
         '<(extra_dir)/variant_norm.h',
         '<(extra_dir)/version.h',
         '<(extra_dir)/wiring_digital_norm.h',
+        '<(extra_dir)/interrupt_norm.h',
 
         '<(lib_dir)/Servo/Servo.h',
         '<(lib_dir)/SPI/SPI.h',
