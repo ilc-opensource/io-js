@@ -3,8 +3,9 @@ ROOT_DIR = $(shell pwd)
 all: configure rebuild
 
 configure:
-	make -C $(ROOT_DIR)/target/device/libio clean
-	make -C $(ROOT_DIR)/target/device/libio rebuild
+	echo "nothing to be done"
+	#make -C $(ROOT_DIR)/target/device/libio clean
+	#make -C $(ROOT_DIR)/target/device/libio rebuild
  
 rebuild:
 	make -C $(ROOT_DIR)/utils/autogen/      run 
@@ -19,7 +20,7 @@ build:
 	./gen_doc.sh
 
 clean:
-	make -C $(ROOT_DIR)/target/device/libio clean
+	#make -C $(ROOT_DIR)/target/device/libio clean
 	make -C $(ROOT_DIR)/target/device       clean
 	make -C $(ROOT_DIR)/utils/autogen/      clean
 	./gen_browser_js.sh -c

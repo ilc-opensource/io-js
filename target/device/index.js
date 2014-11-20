@@ -1,10 +1,12 @@
 var Board = require('./globalClassVarSetterGetter');
 
-var IO = function(config) {
+var IO = function(input) {
 
- var self = this;
+  var self = this;
 
   //Initialize default configu
+  config = input || {};
+
   config.log = config.log || false;
   if(config.quickInit == undefined)
     config.quickInit = false;
