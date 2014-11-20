@@ -7,7 +7,7 @@ var IO = function(config) {
   //Initialize default configu
   config.log = config.log || false;
   if(config.quickInit == undefined)
-    config.quickInit = true;
+    config.quickInit = false;
   
   self.config = function(options) {
   };
