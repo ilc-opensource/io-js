@@ -525,6 +525,8 @@ def GenStringArgTran(arg, idx, argCName, argV8Name, needNewTargName):
     m1 = ""
     m2 = ""
 
+  AddHeapStrObj(argCName)
+
   s += \
 '''
 int %s;
@@ -716,7 +718,9 @@ V8_ASSERT(!%s->IsNull() && %s, "%s.%s parameter error");
         if GetIdenticalType(fldBasicType) == "char":
           s += \
 '''strcpy(%s.%s, %s);
-''' %(argCName, fldName, fldCName)
+delete [] %s;
+''' %(argCName, fldName, fldCName, fldCName)
+          RemoveHeapStrObj(fldCName)
         else:
           s += \
 '''memcpy(%s.%s, %s, sizeof(%s));
@@ -820,7 +824,25 @@ def GetRetName(retType):
 def MangleFuncName(func):
   return func["name"]
 
+def FreeHeapStrObj():
+  s = ""
+  for obj in globalVar.HeapStrObjNames:
+    s += \
+'''
+if (%s) delete [] %s;
+''' %(obj, obj)
+
+  globalVar.HeapStrObjNames = []
+  return s;
+
+def RemoveHeapStrObj(objName):
+  globalVar.HeapStrObjNames.remove(objName);
+
+def AddHeapStrObj(objName):
+  globalVar.HeapStrObjNames.append(objName);
+
 def GenFunc(func):
+  globalVar.HeapStrObjNames = []
   if func["override"]:
     s = GenOverride("", func)
   else:
@@ -1158,9 +1180,11 @@ def GenMethodCall(func, className):
 '''
 %s%s;
 %s
+%s
 return scope.Close(Undefined());
 ''' %(objStr, GenCall(func), \
-    argsReturnStr)
+    argsReturnStr, \
+    FreeHeapStrObj())
 
   else:
     retName = "ret"
@@ -1174,8 +1198,10 @@ return scope.Close(Undefined());
 '''
 %s %s = (%s)%s%s;
 %s
-'''% (sRetType, retName, sRetType, objStr, GenCall(func),\
-      argsReturnStr)
+%s
+'''% (sRetType, retName, sRetType, objStr, GenCall(func), \
+      argsReturnStr, \
+      FreeHeapStrObj())
 
     if IsClassArg(sRetBasicType):
       s += \
@@ -1240,7 +1266,6 @@ def GenOverride(className, func):
 
   s += '''
     V8_ASSERT(false, "parameters error!");
-
     return scope.Close(Undefined());
 }
 '''
@@ -1433,6 +1458,7 @@ def GenClass(className, c):
 
   funcs = c["methods"]["public"]
   for func in funcs:
+    globalVar.HeapStrObjNames = []
     if func["override"]:
       if func["name"] == className:
         continue
@@ -2073,14 +2099,15 @@ def BuildGyp():
     ],
 
     'libraries' : [
-      %s
+      #'-L/io/library/path/,
+      #'-liolib'
     ],
 
-    'includes': [%s]
+    'includes': ['ext.gypi']
 
   }]
 }
-''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc, GYP_LIB, GYP_INC)
+''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc)
   return gypContent
 
 def GenGlobalClassVarJsExport():

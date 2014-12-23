@@ -7,3 +7,4 @@ FuncPointerIncludeFiles = []
 CallBackJsDocTypesHT = {}
 CallBackJsDocTypesCnt = 0
 TypedefCallBackJsDocTypesHT = {}
+HeapStrObjNames = []

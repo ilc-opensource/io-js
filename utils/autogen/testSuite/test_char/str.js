@@ -19,6 +19,20 @@ exports.testCharArrayPointer = function() {
   if (str.toString() != "nj hao")
     throw Error("Failed!!!");
 
+  str2 = new Buffer("hello")
+
+  ret = io.changeStr(str, str2)
+
+  if (str.toString() != "nk hao" || str2.toString() != "Hello")
+    throw Error("Failed!!!");
+
+  str3 = new Buffer("hi")
+
+  ret = io.changeStr(str, str2, str3)
+
+  if (str.toString() != "nl hao" || str2.toString() != "hello" || str3.toString() != "Hi")
+    throw Error("Failed!!!");
+
   if (ret != "Done")
     throw Error("Failed!!!");
 
