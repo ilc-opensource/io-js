@@ -41,20 +41,21 @@ reDecInt = re.compile('[-+]?0[0-7]*[uU]?[lL]?[lL]?')
 reString = re.compile('\".*\"|\'.*\'', re.M and re.S)
 
 C2V8 = { \
-  "int": ["Int32", "ToInt32", "IntegerValue", "int", "IsInt32"], \
-  "unsigned int": ["Uint32", "ToUint32", "Uint32Value", "unsigned int", "IsUint32" ], \
-  "long": ["Number", "ToNumber", "NumberValue", "long", "IsNumber" ], \
-  "long long": ["Number", "ToNumber", "NumberValue", "long long", "IsNumber" ], \
-  "float": ["Number", "ToNumber", "NumberValue", "float", "IsNumber"], \
-  "double": ["Number", "ToNumber", "NumberValue", "double", "IsNumber"], \
-  "bool" : ["Boolean", "ToBoolean", "BooleanValue", "bool", "IsBoolean"], \
+  "char": ["Int32", "ToInt32", "IntegerValue", "int", "IsInt32", "char"], \
+  "int": ["Int32", "ToInt32", "IntegerValue", "int", "IsInt32", "int"], \
+  "unsigned int": ["Uint32", "ToUint32", "Uint32Value", "unsigned int", "IsUint32", "int"], \
+  "long": ["Number", "ToNumber", "NumberValue", "long", "IsNumber", "int" ], \
+  "long long": ["Number", "ToNumber", "NumberValue", "long long", "IsNumber" , "int" ], \
+  "float": ["Number", "ToNumber", "NumberValue", "float", "IsNumber", "float"], \
+  "double": ["Number", "ToNumber", "NumberValue", "double", "IsNumber", "float"], \
+  "bool" : ["Boolean", "ToBoolean", "BooleanValue", "bool", "IsBoolean", "int"], \
 #  "char*": ["v8::String", "ToString", "", "char*", "IsString"] \
 }
 
 #link other types
-C2V8["char"] = C2V8["int"]
 C2V8["short"] = C2V8["int"]
 C2V8["byte"] = C2V8["int"]
+C2V8["unsigned char"] = C2V8["char"]
 C2V8["unsigned long"] = C2V8["long"]
 C2V8["unsigned long long"] = C2V8["long long"]
 C2V8["boolean"] = C2V8["bool"]
@@ -98,7 +99,9 @@ def GetIdenticalType(t):
   t = GetNoQualifierType(t)
 
   if t.find('''*''') == -1 and t.find('''&''') == -1:
-    if t.find("long long") != -1:
+    if t.find("char") != -1:
+      t = "char"
+    elif t.find("long long") != -1:
       t = "long long"
     elif t.find("long") != -1:
       t = "long"
@@ -123,6 +126,20 @@ def GetV8Type(t):
   if t not in C2V8:
     return False  
   return C2V8[t][0]
+
+
+def GetJSType(t):
+  if t == "" or t == "void":
+    return True
+
+  t = GetIdenticalType(t);  
+
+  print "JSType:" + t
+  if t not in C2V8:
+    return False 
+  print C2V8[t][5]
+  return C2V8[t][5]
+
 
 def GetConvToCFunc(t):
   t = GetIdenticalType(t);
@@ -512,3 +529,27 @@ def mkdir(path):
         return True
     else:
         return False
+
+def GenArgName(idx, args):
+  return "arg%d"%idx
+
+def GenArgArrayName(idx):
+  return "args[%d]"%idx
+
+def GenCallArgList(func):
+  s =""
+  args = func["parameters"]
+  for idx, arg in enumerate(args):
+    if arg["type"] == "void":
+      continue
+
+    s += "%s" % (GenArgName(idx, args))
+
+    if idx != (len(args) - 1):
+      s += ", "
+
+  return s
+
+def GenCall(func):
+  return "%s(%s)" % (func["name"], GenCallArgList(func))
+

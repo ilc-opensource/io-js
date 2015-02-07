@@ -6,12 +6,6 @@ from util import *
 def GetV8ClassName(className):
   return className + "V8"
 
-def GenArgName(idx, args):
-  return "arg%d"%idx
-
-def GenArgArrayName(idx):
-  return "args[%d]"%idx
-
 def GetV8FuncName(func):
   name = func["name"]
   if re.match(r"operator.*", name):
@@ -73,20 +67,6 @@ def GenArgList(func, withType):
         s += "%s %s" % (arg["type"], argName)
     else:
       s += "%s" % (argName)
-
-    if idx != (len(args) - 1):
-      s += ", "
-
-  return s
-
-def GenCallArgList(func):
-  s =""
-  args = func["parameters"]
-  for idx, arg in enumerate(args):
-    if arg["type"] == "void":
-      continue
-
-    s += "%s" % (GenArgName(idx, args))
 
     if idx != (len(args) - 1):
       s += ", "
@@ -811,9 +791,6 @@ if (args.Length() > %s) {
 
     s += "\n"
   return s
-
-def GenCall(func):
-  return "%s(%s)" % (func["name"], GenCallArgList(func))
 
 def GetRetName(retType):
   if retType == "" or retType == "void":
