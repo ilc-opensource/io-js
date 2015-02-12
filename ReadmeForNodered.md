@@ -51,28 +51,41 @@ npm test
   - enum
     * integer: 2
 
-* for example
-  - extern struct_t func(struct_t a, int *ib);
-    ``` shell
-    struct ss {
-      int ss1;
-      enum eub e;
-      eua e1; 
-      int ss2[10];
-    };
+  - function pointer
+    * string: "var args0 = function() {}"
 
-    typedef struct {
-      int a[5];
-      float b;
-      eua e;
-      char str[10];
-      struct ss st[2];
-    } struct_t;
-    ```
-  - args shoule be
-    ``` shell
-    {"0":{"a":[10,20,30,40], "b": 21.2e2, "e":0, "str":"nihao", "st" : [ {"ss1": "10" ,"e": 0, "e1": 0, "ss2": [10,"0x20","030"]}]},"1":[20,"0x10"]}
-    ```
+* for example 1
+  ``` shell
+  extern struct_t func(struct_t a, int *ib);
+  struct ss {
+    int ss1;
+    enum eub e;
+    eua e1; 
+    int ss2[10];
+  };
+
+  typedef struct {
+    int a[5];
+    float b;
+    eua e;
+    char str[10];
+    struct ss st[2];
+  } struct_t;
+  ```
+  args shoule be
+  ``` shell
+  {"0":{"a":[10,20,30,40], "b": 21.2e2, "e":0, "str":"nihao", "st" : [ {"ss1": "10" ,"e": 0, "e1": 0, "ss2": [10,"0x20","030"]}]},"1":[20,"0x10"]}
+  ```
+
+* for example 2
+  ``` shell
+  typedef int (*fp_int_r_floatp)(float *);
+  extern int func_int_r_fp1(fp_int_r_floatp fp1);
+  ```
+  args should be
+  ``` shell
+  {"0":" var arg0 = function(a) {     return io.func_int_r_floatp(a);   }"}
+  ```
 
 # How to check the output
   - user `debug node` to check output
