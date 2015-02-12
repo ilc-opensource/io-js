@@ -64,3 +64,11 @@ unsigned char funcuc(unsigned int ui, unsigned char uc) {
 char funcc(int i, char c) {
   return i - c;
 }
+
+void funcvn() {
+  printf("\nhere is void funcvn()\n");
+}
+
+void funcvv(void) {
+  printf("\nhere is void funcvv(void)\n");
+}

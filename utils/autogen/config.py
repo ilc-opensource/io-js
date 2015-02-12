@@ -17,6 +17,7 @@ GLOBAL_DEF           = '_globalvar.h'
 GLOBAL_CPP           = '_globalvar.cpp'
 EXPORT_MODULE        = 'galileo'
 
+NODERED_PATH         = '../../../node-red/nodes/Atlas/iot/funcNodes/' # Please set directory where nodes generated 
 GYP_PATH             = OUTPUT_DEV_PATH + '/../'
 GYP_SRC_PATH         = 'src/' #the relative path of GYP_SRC_PATH to OUTPUT_DEV_PATH from 
 GYP_FILE             = 'binding.gyp'

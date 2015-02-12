@@ -11,6 +11,8 @@ extern unsigned short funcus(short);
 extern short funcs(unsigned short);
 extern unsigned char funcuc(unsigned int, unsigned char);
 extern char funcc(int, char);
+extern void funcvv(void);
+extern void funcvn();
 
 extern char gc;
 extern unsigned char guc;

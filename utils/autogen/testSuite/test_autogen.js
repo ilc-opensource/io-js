@@ -6,8 +6,8 @@ t.testCommon()
 var te = require("./test_enum/enum");
 te.testEnum()
 
-var tc = require("./test_class/class");
-tc.testClass()
+//var tc = require("./test_class/class");
+//tc.testClass()
 
 var tcd = require("./test_char/str");
 tcd.testCharArrayPointer()

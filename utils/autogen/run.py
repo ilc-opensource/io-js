@@ -9,6 +9,7 @@ from genJsApi    import *
 from genJsApiMap import *
 from genC        import *
 from genShell    import *
+from genNodeRedNodes    import *
 
 def ParseHeader(name):
   try:
@@ -65,6 +66,7 @@ def HandleHeader(f):
   #GenJsApiMap(split[0], cppHeader)
   GenJsApi(split[0], globalVar.curCppHeader)
   GenC(split[0], globalVar.curCppHeader)
+  GenNodeRedNodes(split[0], globalVar.curCppHeader)
 
   UnsetPrintModule()
 

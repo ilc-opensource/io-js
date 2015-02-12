@@ -127,19 +127,16 @@ def GetV8Type(t):
     return False  
   return C2V8[t][0]
 
-
 def GetJSType(t):
   if t == "" or t == "void":
     return True
 
   t = GetIdenticalType(t);  
 
-  print "JSType:" + t
   if t not in C2V8:
     return False 
-  print C2V8[t][5]
+  
   return C2V8[t][5]
-
 
 def GetConvToCFunc(t):
   t = GetIdenticalType(t);
