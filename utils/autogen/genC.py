@@ -2076,15 +2076,14 @@ def BuildGyp():
     ],
 
     'libraries' : [
-      #'-L/io/library/path/,
-      #'-liolib'
+       %s
     ],
 
-    'includes': ['ext.gypi']
+    'includes': []
 
   }]
 }
-''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc)
+''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc, GYP_LIB)
   return gypContent
 
 def GenGlobalClassVarJsExport():

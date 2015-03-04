@@ -16,7 +16,7 @@ def GetNodeRedFileName(funcName):
   return GetNodeRedNodeName(funcName)
 
 def GetUtilModuleFile():
-  return "../lib/red-util.js"
+  return os.path.relpath(ATLAS_PATH + '/iot/lib/red-util.js', NODERED_PATH);
 
 def GetUtilModuleName():
   return "RedUtil"
@@ -152,13 +152,13 @@ def GenNodeRedStructArgTran(argType, idx, argJSName, argJSONName, needNewVar):
 
   return s;
 
-def GenNodeRedFPArgTran(arg, argJSName, argFPStr):
+def GenNodeRedFPArgTran(arg, idx, argJSName, argFPStr):
   s = \
 '''
-%s.checkCallbackStr(%s, "%s");
-eval(%s);
-''' %(GetUtilModuleVarName(), argFPStr, argJSName, \
-      argFPStr)
+// Get function argument
+var arg%d = %s.normalCallbackArg(msg, %d, %s)
+''' % (idx, GetUtilModuleVarName(), idx, argFPStr)
+
   return s
 
 def GenNodeRedArgTran(arg, idx, argJSName, argJSONName, needNewVar):
@@ -169,7 +169,7 @@ def GenNodeRedArgTran(arg, idx, argJSName, argJSONName, needNewVar):
     return ""
   
   if (arg["function_pointer"] != 0 and len(arg["function_pointer"]) > 0) :
-    s = GenNodeRedFPArgTran(arg, argJSName, argJSONName)
+    s = GenNodeRedFPArgTran(arg, idx, argJSName, argJSONName)
   elif IsClassArg(argBasicType):
     s = GenNodeRedClassArgTran(arg, argJSName, argJSONName)
   elif IsEnumArg(argType):
@@ -193,15 +193,15 @@ def GenNodeRedArgTrans(func):
   if len(params) == 0:
     return ""
   
-  s = ""
+  s = \
+'''
+// extract arguments from msg
+var args = msg.iot.params;
+'''
   
   for idx, param in enumerate(params):
     if param["type"] == "void":
       return ""
-    if idx == 0:
-      s += \
-'''var args = JSON.parse(msg.payload);
-'''
 
     argJSType = GetJSType(param["type"])
     argJSName = GenArgName(idx, "arg")
@@ -212,8 +212,8 @@ def GenNodeRedArgTrans(func):
       idxStr = idx
     s += \
 '''
-if (!args.hasOwnProperty("%d"))
-  throw Error("Input string should have '%d' properties as the %s parameter of function '%s'.");
+//if (!args.hasOwnProperty("%d"))
+  //throw Error("Input string should have '%d' properties as the %s parameter of function '%s'.");
 ''' %(idx, \
       idx, idxStr, funcName)
  
@@ -230,39 +230,51 @@ def GenNodeRedCallAndSendMsg(func):
 %s.%s;
 ''' % (GetIOInstanceName(), GenCall(func))
   else:
-    msgCnt += 1
+#     msgCnt += 1
+#     s = \
+# '''
+# var res = %s.%s;
+# msg.payload = JSON.stringify(res);
+# ''' % (GetIOInstanceName(), GenCall(func))
+ 
+#   # Send other message (pointer relation)
+#   for idx, param in enumerate(func["parameters"]):
+#     if param["pointer"] + param["array"] >= 1:
+#       argJSName = GenArgName(idx, "arg")
+#       s += \
+# '''
+# %s = {}
+# %s.payload = JSON.stringify(%s);
+# ''' %(GetMsgName(msgCnt), \
+#       GetMsgName(msgCnt), argJSName)
+#       msgCnt += 1
+  
+#   if msgCnt == 1:
+#     s += \
+# '''  
+# node.send(msg);'''
+#   elif msgCnt > 1:
+#     msgSeq = ""
+#     for idx in range(msgCnt):
+#       msgSeq += GetMsgName(idx)
+#       if idx != msgCnt - 1:
+#         msgSeq += ","
+
+#     s += \
+# '''
+# node.send([%s]);''' %(msgSeq)
     s = \
 '''
 var res = %s.%s;
-msg.payload = JSON.stringify(res);
-''' % (GetIOInstanceName(), GenCall(func))
- 
-  # Send other message (pointer relation)
-  for idx, param in enumerate(func["parameters"]):
-    if param["pointer"] + param["array"] >= 1:
-      argJSName = GenArgName(idx, "arg")
-      s += \
-'''
-%s = {}
-%s.payload = JSON.stringify(%s);
-''' %(GetMsgName(msgCnt), \
-      GetMsgName(msgCnt), argJSName)
-      msgCnt += 1
+%s.send({
+  'payload': res,
+  'iot': {
+    'method': msg.iot.method,
+    'return': res
+  }
+});
+'''% (GetIOInstanceName(), GenCall(func), GetUtilModuleVarName())
   
-  if msgCnt == 1:
-    s += \
-'''  
-node.send(msg);'''
-  elif msgCnt > 1:
-    msgSeq = ""
-    for idx in range(msgCnt):
-      msgSeq += GetMsgName(idx)
-      if idx != msgCnt - 1:
-        msgSeq += ","
-
-    s += \
-'''
-node.send([%s]);''' %(msgSeq)
   return s
 
 
@@ -294,13 +306,13 @@ def GenNodeRedFuncHtmlFile(className, func, funcRename):
     category: 'function',
     color: '#c7e9c0',
     defaults: {
-      name: {value:""}
+      name: {value:"%s"}
     },
     inputs:1,
     outputs:%d,
     icon: "function.png",
     label: function() {
-      return this.name||"%s";
+      return this.name;
     }
   });
 </script>
@@ -315,7 +327,7 @@ def GenNodeRedFuncHtmlFile(className, func, funcRename):
 <script type="text/x-red" data-help-name="%s">
   <p>A function node: %s</p>
 </script>
-''' %(nodeName, nodeName, outputCnt, nodeName, nodeName, nodeName, func["debug"])
+''' %(nodeName, nodeName, nodeName, outputCnt, nodeName, nodeName, func["debug"])
 
   return s
 
@@ -328,10 +340,15 @@ function %s(config) {
   var node = this;
   var %s = new %s(node, config);
   this.on('input', function(msg) {
+
+    // Validate the msg 
+    if(!%s.isValid(msg))
+      return;
 ''' %( \
       func["debug"], \
       GetNodeRedFuncName(funcRename), \
-      GetUtilModuleVarName(), GetUtilModuleName())
+      GetUtilModuleVarName(), GetUtilModuleName(), \
+      GetUtilModuleVarName())
 
   s += AddIndent(GenNodeRedArgTrans(func), 4)
   
@@ -411,7 +428,7 @@ def GenNodeRedNodes(module, cppHeader):
   fp = open(f, "w")
   
   s = \
-'''var IOLIB = require('%s/../../../../../io-js');
+'''var IOLIB = require('%s');
 
 var %s = new IOLIB.IO({
   log: true,
@@ -421,7 +438,7 @@ var %s = new IOLIB.IO({
 var %s = require('%s')
 
 module.exports = function(RED) {
-''' %(NODERED_PATH, \
+''' %(os.path.relpath(TARGET_DIR + '/device', NODERED_PATH), \
       GetIOInstanceName(), \
       GetUtilModuleName(), GetUtilModuleFile())
 
