@@ -2050,9 +2050,10 @@ def BuildGyp():
   inc = ""
   for idx in config.INPUT_DECL_PATHS:
     if os.path.isfile(idx):
-      inc += "'" + os.path.dirname(idx) + "',\n"
+      dirT = os.path.dirname(idx)
     else:
-      inc += "'" + idx + "',\n"
+      dirT = idx  
+    inc += "'" + os.path.abspath(dirT) + "',\n"
   inc = AddIndent(inc, 6)
 
   gypContent = GetGypComment("ext.gypi")
