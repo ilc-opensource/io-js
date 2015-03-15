@@ -10,7 +10,7 @@ from genJsApiMap import *
 from genC        import *
 from genShell    import *
 from genNodeRedNodes    import *
-
+from installAll  import *
 def ParseHeader(name):
   try:
     printDbg("parsing " + name)
@@ -106,4 +106,5 @@ if __name__ == "__main__":
   GenGyp()
   GenGlobalClassVarJsExport()
   GenShell()
+  InstallAll()
   DumpSummary()

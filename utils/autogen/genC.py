@@ -1957,6 +1957,7 @@ def DumpFileSummary():
   s += fmt % ("cpp", totalC)
   s += fmt % ("h", totalH)
   s += fmt % ("gyp", GYP_PATH + GYP_FILE)
+  s += fmt % ("install", INSTALL_DIR) 
   s += "================================\n"
 
   printLog(s)

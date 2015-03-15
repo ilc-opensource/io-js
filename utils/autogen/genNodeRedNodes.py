@@ -414,6 +414,8 @@ def GenNodeRedNodes(module, cppHeader):
   printDbg("GenNodeRedNodes:")
   printDbg("transfering " + module)
 
+  mkdir(NODERED_PATH)
+
   for c in cppHeader.classes:
     printDbg("class function convertion is not support for current version.")
     break
@@ -428,7 +430,7 @@ def GenNodeRedNodes(module, cppHeader):
   fp = open(f, "w")
   
   s = \
-'''var IOLIB = require('%s');
+'''var IOLIB = require('./%s');
 
 var %s = new IOLIB.IO({
   log: true,
@@ -438,7 +440,7 @@ var %s = new IOLIB.IO({
 var %s = require('%s')
 
 module.exports = function(RED) {
-''' %(os.path.relpath(TARGET_DIR + '/device', NODERED_PATH), \
+''' %(os.path.relpath(INSTALL_DIR, NODERED_PATH), \
       GetIOInstanceName(), \
       GetUtilModuleName(), GetUtilModuleFile())
 

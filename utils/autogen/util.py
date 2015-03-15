@@ -549,4 +549,3 @@ def GenCallArgList(func):
 
 def GenCall(func):
   return "%s(%s)" % (func["name"], GenCallArgList(func))
-
