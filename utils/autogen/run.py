@@ -105,5 +105,6 @@ if __name__ == "__main__":
   GenCallback()
   GenGyp()
   GenGlobalClassVarJsExport()
+  GenIndexAndPackageFile()
   GenShell()
   DumpSummary()

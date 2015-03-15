@@ -438,7 +438,7 @@ var %s = new IOLIB.IO({
 var %s = require('%s')
 
 module.exports = function(RED) {
-''' %(os.path.relpath(TARGET_DIR + '/device', NODERED_PATH), \
+''' %(os.path.abspath(TARGET_DIR) + '/device/', \
       GetIOInstanceName(), \
       GetUtilModuleName(), GetUtilModuleFile())
 
