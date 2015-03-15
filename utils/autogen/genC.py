@@ -2052,9 +2052,11 @@ def BuildGyp():
   for idx in config.INPUT_DECL_PATHS:
     if os.path.isfile(idx):
       dirT = os.path.dirname(idx)
+      inc += "'" + os.path.abspath(dirT) + "',\n"
     else:
-      dirT = idx  
-    inc += "'" + os.path.abspath(dirT) + "',\n"
+      for root, dirs, fs in os.walk(idx):
+        inc += "'" + os.path.abspath(root) + "',\n"
+  
   inc = AddIndent(inc, 6)
 
   gypContent = GetGypComment("ext.gypi")
@@ -2144,3 +2146,15 @@ module.exports = function(options) {
 
   fp.write(s)
   fp.close()
+
+def GenIndexAndPackageFile():
+  targetDir = os.path.join(os.path.abspath(TARGET_DIR), "./device/")
+  srcDir = os.path.join(os.getcwd(), "../../target/device/")
+
+  print srcDir
+  print targetDir
+
+  os.system("rm -r " + os.path.join(targetDir, "./index.js"))
+  os.system("rm -r " + os.path.join(targetDir, "./package.json"));
+  os.system("ln -s " + os.path.join(srcDir, "./index.js") + " " + targetDir);
+  os.system("ln -s " + os.path.join(srcDir, "./package.json") + " " + targetDir);
