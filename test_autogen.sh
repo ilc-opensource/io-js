@@ -2,7 +2,7 @@
 home_dir=`pwd`
 
 cd $home_dir/utils/autogen
-python run.py autogen_test
+python run.py -t
 
 if [ $? -ne 0 ]; then
   exit 1
