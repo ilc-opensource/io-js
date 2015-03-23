@@ -1,6 +1,7 @@
 import os
 import globalVar
 import config
+import configSys
 from util import *
 
 def GetV8ClassName(className):
@@ -1395,7 +1396,7 @@ Handle<Value> %s::New(const Arguments& args) {
             return args.This();
         }
     }
-''' %(INSTANCE_V8CLASS_ARG, v8ClassName, v8ClassName)
+''' %(configSys.SysINSTANCE_V8CLASS_ARG, v8ClassName, v8ClassName)
 
   funcs = c["methods"]["public"]
   for func in funcs:
@@ -1559,7 +1560,7 @@ def GenModule(module, cppHeader):
 
 using namespace v8;
 
-''' % (module, GLOBAL_DEF)
+''' % (module, configSys.GLOBAL_DEF)
 
   for c in cppHeader.classes:
     classT = cppHeader.classes[c]
@@ -1703,15 +1704,15 @@ def GenPreGlobalInit():
 
 void exportV8(Handle<Object> exports) {
 
-''' % EXPORT_DEF
-  mkdir(OUTPUT_DEV_PATH)
-  f = OUTPUT_DEV_PATH + "/" + EXPORT_CPP
+''' % configSys.EXPORT_DEF
+  mkdir(configSys.OUTPUT_DEV_PATH)
+  f = configSys.OUTPUT_DEV_PATH + "/" + configSys.EXPORT_CPP
   printDbg("generateing " + f)
   fp = open(f, "w")
   fp.write(s)
   fp.close()  
   
-  m = EXPORT_DEF.replace('.', '_').upper()
+  m = configSys.EXPORT_DEF.replace('.', '_').upper()
   s = GetComment()
   s += \
 '''
@@ -1724,7 +1725,7 @@ void exportV8(Handle<Object> exports) {
 using namespace v8;
 
 ''' % (m, m)
-  f = OUTPUT_DEV_PATH + "/" + EXPORT_DEF
+  f = configSys.OUTPUT_DEV_PATH + "/" + configSys.EXPORT_DEF
   printDbg("generateing " + f)
   fp = open(f, "w")
   fp.write(s)
@@ -1749,8 +1750,8 @@ void Init(Handle<Object> exports) {
 
 
 NODE_MODULE(%s, Init)
-''' % EXPORT_MODULE
-  f = OUTPUT_DEV_PATH + "/" + EXPORT_CPP
+''' % configSys.EXPORT_MODULE
+  f = configSys.OUTPUT_DEV_PATH + "/" + configSys.EXPORT_CPP
   printDbg("finished " + f)
   fp = open(f, "a+")
   fp.write(s)
@@ -1760,7 +1761,7 @@ NODE_MODULE(%s, Init)
 '''
 #endif
 ''' 
-  f = OUTPUT_DEV_PATH + "/" + EXPORT_DEF
+  f = configSys.OUTPUT_DEV_PATH + "/" + configSys.EXPORT_DEF
   printDbg("finished " + f)
   fp = open(f, "a+")
   fp.write(s)
@@ -1779,19 +1780,19 @@ std::map <void *, Persistent<Object> > CClassToJsObjMap;
 std::map <void *, Persistent<Object> >::iterator iter;
 Persistent<Object> JSObj;
 
-'''%(GLOBAL_DEF, globalVar.FuncPointerCnt)
+'''%(configSys.GLOBAL_DEF, globalVar.FuncPointerCnt)
 
   #Generate Wrapper call of Function Pointer
   s += GenCallbackFuncs()
 
-  f = OUTPUT_DEV_PATH + "/" + GLOBAL_CPP
+  f = configSys.OUTPUT_DEV_PATH + "/" + configSys.GLOBAL_CPP
   printDbg("finished " + f)
   fp = open(f, "w+")
   fp.write(s)
   fp.close()
 
   # Generate global var decl and global func decl
-  m = GLOBAL_DEF.replace('.', '_').upper()
+  m = configSys.GLOBAL_DEF.replace('.', '_').upper()
   s = GetComment()
   s += \
 '''#ifndef %s
@@ -1847,7 +1848,7 @@ extern Persistent<Object> JSObj;
 #endif
 '''
 
-  f = OUTPUT_DEV_PATH + "/" + GLOBAL_DEF
+  f = configSys.OUTPUT_DEV_PATH + "/" + configSys.GLOBAL_DEF
   printDbg("finished " + f)
   fp = open(f, "w+")
   fp.write(s)
@@ -1866,6 +1867,7 @@ def GenC(module, cppHeader):
 
   global summary
   global thisSummary
+  
   thisSummary = {"succFuncs":[], "failFuncs": [], \
                  "succGlobalVar": [], "failGlobalVar": [], \
                  "succGlobalClassVar": {}, "failGlobalClassVar": {}, \
@@ -1874,7 +1876,7 @@ def GenC(module, cppHeader):
   printDbg("transfering " + module)
 
   target =  module + "_addon.cpp"
-  f = OUTPUT_DEV_PATH + "/" + target
+  f = configSys.OUTPUT_DEV_PATH + "/" + target
   thisSummary["cpp"].append(target)
   fp = open(f, "w")
   fp.write(GenModule(module, cppHeader))
@@ -1883,19 +1885,19 @@ def GenC(module, cppHeader):
   printDbg("generate " + f)
 
   target = module + "_addon.h"
-  f = OUTPUT_DEV_PATH + "/" + target
+  f = configSys.OUTPUT_DEV_PATH + "/" + target
   thisSummary["h"].append(target)
   fp = open(f, "w")
   fp.write(GenModuleDecl(module, cppHeader))
   fp.close()
   printDbg("generate " + f)
 
-  f = OUTPUT_DEV_PATH + "/" + EXPORT_DEF
+  f = configSys.OUTPUT_DEV_PATH + "/" + configSys.EXPORT_DEF
   fp = open(f, "a+")
   fp.write(GenGlobalDecl(module))
   fp.close()
 
-  f = OUTPUT_DEV_PATH + "/" + EXPORT_CPP
+  f = configSys.OUTPUT_DEV_PATH + "/" + configSys.EXPORT_CPP
   fp = open(f, "a+")
   fp.write(GenGlobalInit(module))
   fp.close()
@@ -1950,14 +1952,14 @@ def DumpFileSummary():
   fmt = "%-8s:  %s\n"
   s = "\nSummary of created files\n"
   s += "================================\n"
-  #dont forget EXPORT_DEF and EXPORT_CPP
-  s += fmt % ("module", EXPORT_MODULE)
-  s += fmt % ("path", OUTPUT_DEV_PATH)
-  s += fmt % ("export", EXPORT_CPP)
+  #dont forget configSys.EXPORT_DEF and configSys.EXPORT_CPP
+  s += fmt % ("module", configSys.EXPORT_MODULE)
+  s += fmt % ("path", configSys.OUTPUT_DEV_PATH)
+  s += fmt % ("export", configSys.EXPORT_CPP)
   s += fmt % ("cpp", totalC)
   s += fmt % ("h", totalH)
-  s += fmt % ("gyp", GYP_PATH + GYP_FILE)
-  s += fmt % ("install", INSTALL_DIR) 
+  s += fmt % ("gyp", configSys.GYP_PATH + configSys.GYP_FILE)
+  s += fmt % ("install", config.INSTALL_DIR) 
   s += "================================\n"
 
   printLog(s)
@@ -1967,7 +1969,7 @@ def DumpSummary():
   DumpFunctionSummary()
 
 def GenGyp():
-  f = GYP_PATH + GYP_FILE
+  f = configSys.GYP_PATH + configSys.GYP_FILE
   fp = open(f, "w")
   if config.AUTOGEN_TEST == 1:
     fp.write(BuildTestGyp())
@@ -1994,10 +1996,10 @@ def BuildTestGyp():
   for idx in summary:
     item = summary[idx]
     for f in item["cpp"]:
-      files += "'" + GYP_SRC_PATH + f + "',\n"
+      files += "'" + configSys.GYP_SRC_PATH + f + "',\n"
 
-  files += "'" + GYP_SRC_PATH + EXPORT_CPP + "',\n"
-  files += "'" + GYP_SRC_PATH + GLOBAL_CPP + "'\n"
+  files += "'" + configSys.GYP_SRC_PATH + configSys.EXPORT_CPP + "',\n"
+  files += "'" + configSys.GYP_SRC_PATH + configSys.GLOBAL_CPP + "'\n"
   files = AddIndent(files, 6)
 
   inc = ""
@@ -2031,7 +2033,7 @@ def BuildTestGyp():
     ],
   }]
 }
-''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc)
+''' % (configSys.EXPORT_MODULE, files, configSys.GYP_SRC_PATH, inc)
   return gypContent
 
 def BuildGyp():
@@ -2041,21 +2043,21 @@ def BuildGyp():
     item = summary[idx]
     for f in item["cpp"]:
       if f == "version_export_addon.cpp":
-        files += "'" + GYP_SRC_PATH + "version_export.cpp',\n"
-      files += "'" + GYP_SRC_PATH + f + "',\n"
+        files += "'" + configSys.GYP_SRC_PATH + "version_export.cpp',\n"
+      files += "'" + configSys.GYP_SRC_PATH + f + "',\n"
 
-  files += "'" + GYP_SRC_PATH + EXPORT_CPP + "',\n"
-  files += "'" + GYP_SRC_PATH + GLOBAL_CPP + "'\n"
+  files += "'" + configSys.GYP_SRC_PATH + configSys.EXPORT_CPP + "',\n"
+  files += "'" + configSys.GYP_SRC_PATH + configSys.GLOBAL_CPP + "'\n"
   files = AddIndent(files, 6)
 
   inc = ""
   for idx in config.INPUT_DECL_PATHS:
     if os.path.isfile(idx):
       dirT = os.path.dirname(idx)
-      inc += "'" + os.path.abspath(dirT) + "',\n"
+      inc += "'" + os.path.relpath(dirT, config.INSTALL_DIR) + "',\n"
     else:
       for root, dirs, fs in os.walk(idx):
-        inc += "'" + os.path.abspath(root) + "',\n"
+        inc += "'" + os.path.relpath(root, config.INSTALL_DIR) + "',\n"
   
   inc = AddIndent(inc, 6)
 
@@ -2087,12 +2089,12 @@ def BuildGyp():
 
   }]
 }
-''' % (EXPORT_MODULE, files, GYP_SRC_PATH, inc, GYP_LIB)
+''' % (configSys.EXPORT_MODULE, files, configSys.GYP_SRC_PATH, inc, config.GYP_LIB)
   return gypContent
 
 def GenGlobalClassVarJsExport():
   global summary
-  f = GYP_PATH + Global_CLASS_VAR_FILE
+  f = configSys.GYP_PATH + configSys.GLOBAL_CLASS_VAR_FILE
   fp = open(f, "w")
 
   methodNames = []
@@ -2121,7 +2123,7 @@ module.exports = function(options) {
     return tmp;
   }
 ''' %(funcNameJS, \
-      varType, INSTANCE_V8CLASS_ARG, \
+      varType, configSys.INSTANCE_V8CLASS_ARG, \
       funcNameV8);
 
         methodNames.append("%s" %(funcNameJS))
@@ -2146,15 +2148,3 @@ module.exports = function(options) {
 
   fp.write(s)
   fp.close()
-
-def GenIndexAndPackageFile():
-  targetDir = os.path.join(os.path.abspath(TARGET_DIR), "./device/")
-  srcDir = os.path.join(os.getcwd(), "../../target/device/")
-
-  print srcDir
-  print targetDir
-
-  os.system("rm -r " + os.path.join(targetDir, "./index.js"))
-  os.system("rm -r " + os.path.join(targetDir, "./package.json"));
-  os.system("ln -s " + os.path.join(srcDir, "./index.js") + " " + targetDir);
-  os.system("ln -s " + os.path.join(srcDir, "./package.json") + " " + targetDir);

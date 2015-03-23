@@ -1,4 +1,4 @@
-from config  import *
+import config
 from util import *
 import shutil, errno
 import os
@@ -12,10 +12,10 @@ def copyAnything(src, dst):
         else: raise
 
 def InstallAddon():
-  if os.path.exists(INSTALL_DIR):
-    shutil.rmtree(INSTALL_DIR)
+  if os.path.exists(config.INSTALL_DIR):
+    shutil.rmtree(config.INSTALL_DIR)
  
-  copyAnything(ADDON_DIR, INSTALL_DIR)
+  copyAnything(configSys.ADDON_DIR, config.INSTALL_DIR)
 
 def InstallAll():
   InstallAddon() 

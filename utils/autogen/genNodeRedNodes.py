@@ -16,7 +16,7 @@ def GetNodeRedFileName(funcName):
   return GetNodeRedNodeName(funcName)
 
 def GetUtilModuleFile():
-  return os.path.relpath(ATLAS_PATH + '/iot/lib/red-util.js', NODERED_PATH);
+  return os.path.relpath(config.ATLAS_PATH + '/iot/lib/red-util.js', config.NODERED_PATH);
 
 def GetUtilModuleName():
   return "RedUtil"
@@ -414,7 +414,7 @@ def GenNodeRedNodes(module, cppHeader):
   printDbg("GenNodeRedNodes:")
   printDbg("transfering " + module)
 
-  mkdir(NODERED_PATH)
+  mkdir(config.NODERED_PATH)
 
   for c in cppHeader.classes:
     printDbg("class function convertion is not support for current version.")
@@ -426,7 +426,7 @@ def GenNodeRedNodes(module, cppHeader):
   # Generate JS file
   jsFile =  GetNodeRedFileName(module) + ".js"
   printDbg("generate " + jsFile)
-  f = NODERED_PATH + "/" + jsFile
+  f = config.NODERED_PATH + "/" + jsFile
   fp = open(f, "w")
   
   s = \
@@ -440,7 +440,7 @@ var %s = new IOLIB.IO({
 var %s = require('%s')
 
 module.exports = function(RED) {
-''' %(os.path.relpath(INSTALL_DIR, NODERED_PATH), \
+''' %(os.path.relpath(config.INSTALL_DIR, config.NODERED_PATH), \
       GetIOInstanceName(), \
       GetUtilModuleName(), GetUtilModuleFile())
 
@@ -455,7 +455,7 @@ module.exports = function(RED) {
   # Generate html file
   htmlFile =  GetNodeRedFileName(module) + ".html"
   printDbg("generate " + htmlFile)
-  f = NODERED_PATH + "/" + htmlFile
+  f = config.NODERED_PATH + "/" + htmlFile
   fp = open(f, "w")
   
   s = ""

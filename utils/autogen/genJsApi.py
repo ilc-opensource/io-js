@@ -1,4 +1,4 @@
-from config import *
+import configSys
 from util import *
 import os
 import globalVar
@@ -297,8 +297,8 @@ def GenJsEnumConst(enums):
   return s
 
 def GenPreFuncJsApi():
-  mkdir(OUTPUT_COMP_PATH)
-  f = OUTPUT_COMP_PATH + "/" + TARGET +".js"
+  mkdir(configSys.OUTPUT_COMP_PATH)
+  f = configSys.OUTPUT_COMP_PATH + "/" + configSys.TARGET +".js"
   fp = open(f, "w")
   s = \
 '''
@@ -321,7 +321,7 @@ var Board = function(options) {
   fp.write(s)
 
 def GenPostFuncJsApi():
-  f = OUTPUT_COMP_PATH + "/" + TARGET +".js"
+  f = configSys.OUTPUT_COMP_PATH + "/" + configSys.TARGET +".js"
   fp = open(f, "a")
   s = \
 '''
@@ -335,8 +335,8 @@ exports.Board = Board;
   fp.write(s)
 
 def GenPreFuncJsApiMap():
-  mkdir(OUTPUT_SERVER_PATH)
-  f = OUTPUT_SERVER_PATH + "/" + TARGET + ".js"
+  mkdir(configSys.OUTPUT_SERVER_PATH)
+  f = configSys.OUTPUT_SERVER_PATH + "/" + configSys.TARGET + ".js"
   fp = open(f, "w")
   s = \
 '''
@@ -351,7 +351,7 @@ var methods = function(options) {
   fp.write(s)
 
 def GenPostFuncJsApiMap():
-  f = OUTPUT_SERVER_PATH + "/" + TARGET + ".js"
+  f = configSys.OUTPUT_SERVER_PATH + "/" + configSys.TARGET + ".js"
   fp = open(f, "a")
   s = \
 '''
@@ -494,12 +494,12 @@ def GenJsApi(module, cppHeader):
     clientStr += GenFuncJsApi(func)
     servStr += GenFuncJsApiMap(func)
 
-  f = OUTPUT_COMP_PATH + "/" + TARGET +".js"
+  f = configSys.OUTPUT_COMP_PATH + "/" + configSys.TARGET +".js"
   fp = open(f, "a")
   fp.write(clientStr)
   printDbg( "generate " + f)
 
-  f = OUTPUT_SERVER_PATH + "/" + TARGET +".js"
+  f = configSys.OUTPUT_SERVER_PATH + "/" + configSys.TARGET +".js"
   fp = open(f, "a")
   fp.write(servStr)
   printDbg( "generate " + f)

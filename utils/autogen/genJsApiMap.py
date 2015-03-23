@@ -1,4 +1,4 @@
-from config import *
+import configSys
 from util import *
 
 def GenArgsMap(args):
@@ -184,8 +184,8 @@ def GenJsApiMap(module, cppHeader):
   rs += "\n}"
 
   #write to map file
-  mkdir(OUTPUT_CMD_MAP_PATH)
-  f = OUTPUT_CMD_MAP_PATH + "/" + module + "_map.json"  
+  mkdir(configSys.OUTPUT_CMD_MAP_PATH)
+  f = configSys.OUTPUT_CMD_MAP_PATH + "/" + module + "_map.json"  
   
   fp = open(f, "w")
   fp.write(rs)
