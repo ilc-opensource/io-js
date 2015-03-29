@@ -1,5 +1,6 @@
+import os
 VERSION = '0.0.1'
-TARGET_DIR           = '../../target'
+TARGET_DIR           = os.path.split(os.path.realpath(__file__))[0] + '/../../target'
 VERSION              = '0.0.1'
 TARGET               = 'galileo'
 ADDON_DIR            = TARGET_DIR + '/device'
@@ -20,5 +21,5 @@ GLOBAL_CLASS_VAR_FILE    = 'globalClassVarSetterGetter.js'
 INSTANCE_V8CLASS_ARG     = '__instanceV8' # used to generate a V8 class Object without
                                           # corresponding C class generated.
 
-INC_MAKEFILE         = 'autogen.make'
+INC_MAKEFILE         = os.path.split(os.path.realpath(__file__))[0] + '/autogen.make'
 

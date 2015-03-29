@@ -2082,14 +2082,17 @@ def BuildGyp():
     ],
 
     'libraries' : [
-       %s
+       '%s',
+       '%s'
     ],
 
     'includes': []
 
   }]
 }
-''' % (configSys.EXPORT_MODULE, files, configSys.GYP_SRC_PATH, inc, config.GYP_LIB)
+''' % (configSys.EXPORT_MODULE, files, configSys.GYP_SRC_PATH, inc, 
+    '../' + os.path.relpath(config.INPUT_LIB_PATH, config.INSTALL_DIR),
+    config.EXTRA_LIB)
   return gypContent
 
 def GenGlobalClassVarJsExport():

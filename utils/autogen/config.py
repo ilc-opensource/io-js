@@ -14,10 +14,6 @@ NODERED_PATH         = ATLAS_PATH + '/iot/sample/face_detection'
 INSTALL_DIR          = NODERED_PATH + '/addon'
 EXTRA_LIB            = '/usr/local/lib/libopencv_calib3d.so /usr/local/lib/libopencv_core.so /usr/local/lib/libopencv_features2d.so /usr/local/lib/libopencv_flann.so /usr/local/lib/libopencv_highgui.so /usr/local/lib/libopencv_imgproc.so /usr/local/lib/libopencv_ml.so /usr/local/lib/libopencv_objdetect.so /usr/local/lib/libopencv_photo.so /usr/local/lib/libopencv_stitching.so /usr/local/lib/libopencv_superres.so /usr/local/lib/libopencv_ts.a /usr/local/lib/libopencv_video.so /usr/local/lib/libopencv_videostab.so'
 
-##### DO NOT CHANGE BELOW VAR ######
-
-GYP_LIB              = '"' + '../' + os.path.relpath(INPUT_LIB_PATH, INSTALL_DIR) + ' ' + EXTRA_LIB + '"'
-
 AUTOGEN_TEST = 0
 
 DEBUG = 1
