@@ -46,11 +46,11 @@ exports.testStruct = function() {
   if (ret.st[0].ss1 != 18 || ret.st[0].ss2[0] != 2)
     throw Error("Failed!!!");
 
-  objArr = [obj]
+  objArr = obj
   ret = io.funcp(b, objArr)
-  if (objArr[0].a[0] != 789 || !fp_cmp.float_eq(objArr[0].b, 23.45) || objArr[0].e != io.EUC1 || objArr[0].str[3] != 0x74)
+  if (objArr.a[0] != 789 || !fp_cmp.float_eq(objArr.b, 23.45) || objArr.e != io.EUC1 || objArr.str[3] != 0x74)
     throw Error("Failed!!!");
-  if (objArr[0].st[0].ss1 != 18 || objArr[0].st[0].ss2[2] != 2)
+  if (objArr.st[0].ss1 != 18 || objArr.st[0].ss2[2] != 2)
     throw Error("Failed!!!");
 
   objs = {
