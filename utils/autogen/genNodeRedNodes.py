@@ -196,7 +196,7 @@ def GenNodeRedArgTrans(func):
   s = \
 '''
 // extract arguments from msg
-var args = msg.iot.params;
+var args = msg.payload;
 '''
   
   for idx, param in enumerate(params):
@@ -220,6 +220,17 @@ var args = msg.iot.params;
     s += GenNodeRedArgTran(param, idx, argJSName, argJSONName, True);
       
   return s  
+
+def GenNodeRedCall(func):
+  msgCnt = 0
+  retIdenticalType = GetIdenticalType(func["rtnType"]["type"])
+  if retIdenticalType == "" or retIdenticalType == "void":
+    s = "\n"
+  else:
+    s = "\nvar res = "
+  s += "%s.%s;" % (GetIOInstanceName(), GenCall(func))
+  
+  return s
 
 def GenNodeRedCallAndSendMsg(func):
   msgCnt = 0
@@ -464,3 +475,420 @@ module.exports = function(RED) {
   
   fp.write(s)
   fp.close()
+
+def NodeInitFuncSuffix():
+  return "Init"
+def NodeOnDataFuncSuffix():
+  return "OnData"
+def NodeReleaseFuncSuffix():
+  return "Release"
+def NodeConfigStructSuffix():
+  return "Config"
+
+def SplitNodeComponentName(ComName):
+  if ComName.endswith(NodeInitFuncSuffix()):
+    return ComName.partition(NodeInitFuncSuffix())
+  if ComName.endswith(NodeOnDataFuncSuffix()):
+    return ComName.partition(NodeOnDataFuncSuffix())
+  if ComName.endswith(NodeReleaseFuncSuffix()):
+    return ComName.partition(NodeReleaseFuncSuffix())
+  if ComName.endswith(NodeConfigStructSuffix()):
+    return ComName.partition(NodeConfigStructSuffix())
+  
+  assert 0, "Unexpected Component name %s" %(ComName)
+  return ComName
+
+def IsMacroDefined(macroName, cppHeader):
+  for define in cppHeader.defines:
+    macros = IsValidMacro(define)
+    if len(macros) != 0 and macroName == macros[0]:
+      return True
+  return False
+
+
+def HaveDefaultValueForStructField(structType, cppHeader):
+  s = ""
+  structType = GetNoQualifierType(structType)
+
+  if (not IsStructArg(structType)):
+    return s
+
+  argStructName = re.sub(r'^struct ', '', structType)
+  cls = GetClass(argStructName)
+
+  props = cls["properties"]["public"]
+  for idxs, prop in enumerate(props):
+    fldName = prop["name"]
+    fldMacroName = argStructName + "_" + fldName
+    if not IsMacroDefined(fldMacroName, cppHeader):
+      printErr("macro %s is not defined, which is the default value of field %s:%s." \
+               %(fldMacroName, argStructName, fldName))
+      return False
+
+  return True
+    
+
+def IsValidInitFunc(func, cppHeader):
+  for idx, para in enumerate(func["parameters"]):
+    if idx == 0:
+      if not IsStructArg(para["type"]):
+        printErr("First parameter type of %s must be struct." %func["name"])
+        return False
+      if not (HaveDefaultValueForStructField(para["type"], cppHeader)):
+        printErr("First parameter of %s must have default value." %func["name"])
+        return False
+    continue
+
+    if not (para["function_pointer"] != 0 and len(para["function_pointer"]) > 0):
+      printErr("parameters of func %s shoule be (struct, cb, cb, cb, ...)." %func["name"])
+      return False
+  return True
+
+def GatherNodeInfo(module, cppHeader):
+  printDbg("GetherNodeInfo:")
+
+  for c in cppHeader.classes:
+    printDbg("class function convertion is not support for current version.")
+    break
+    classT = cppHeader.classes[c]
+    if (classT["abstract"] == False) and (classT['declaration_method'] == "class"):
+      s += GenClass(c, cppHeader.classes[c])
+  
+  NodeGroup = {}
+  
+  init = NodeInitFuncSuffix()
+  onData = NodeOnDataFuncSuffix()
+  release = NodeReleaseFuncSuffix()
+  struct = NodeConfigStructSuffix()
+
+  for func in cppHeader.functions:
+    funcName = func["name"]
+    funcNameSplits = SplitNodeComponentName(funcName)
+    nodeName = funcNameSplits[0]
+    funcNameSuffix = funcNameSplits[1]
+    if (funcNameSuffix == init) and not IsValidInitFunc(func, cppHeader):
+      continue
+      
+    if NodeGroup.has_key(nodeName):
+      NodeInfo = NodeGroup[nodeName]
+      if NodeInfo[funcNameSuffix] == 0:
+        NodeInfo[funcNameSuffix] = func
+      else:
+        assert 0, "dumplicate definition of %s" %funcName
+    else:
+      NodeGroup[nodeName] = {init:0, onData:0, release:0, struct:0}
+      NodeGroup[nodeName][funcNameSuffix] = func
+
+  for node in NodeGroup.keys():
+    funcs = NodeGroup[node]
+    initFunc = funcs[NodeInitFuncSuffix()]
+    onDataFunc = funcs[NodeOnDataFuncSuffix()]
+    releaseFunc = funcs[NodeReleaseFuncSuffix()]
+    if initFunc == 0:
+      printErr("Function 'init' is not defined for node %s" %node) 
+      del NodeGroup[node]
+      continue
+    if onDataFunc == 0:
+      printErr("Function 'onData' is not defined for node %s" %node) 
+      del NodeGroup[node]
+      continue
+    if releaseFunc == 0:
+      printErr("Function 'release' is not defined for node %s" %node) 
+      del NodeGroup[node]
+      continue
+
+  return NodeGroup
+
+def GenGatheredNodeRedNodes(module, cppHeader):
+  printDbg("GenGatheredNodeRedNodes:")
+  printDbg("transfering " + module)
+  
+  mkdir(config.NODERED_PATH)
+
+  NodeGroup = GatherNodeInfo(module, cppHeader)
+  
+  GenGatheredNodeRedJsFile(NodeGroup)
+  GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader)
+  
+def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
+  for node in NodeGroup.keys():
+    funcs = NodeGroup[node]
+    initFunc = funcs[NodeInitFuncSuffix()]
+    onDataFunc = funcs[NodeOnDataFuncSuffix()]
+    releaseFunc = funcs[NodeReleaseFuncSuffix()]
+    configType = initFunc["parameters"][0]["type"]
+
+    # Generate HTML file
+    htmlFile =  node + ".html"
+    printDbg("generate " + htmlFile)
+    f = config.NODERED_PATH + "/" + htmlFile
+    fp = open(f, "w")
+      
+    s = \
+'''
+<!-- %s -->
+<script type="text/javascript">
+  RED.nodes.registerType('%s',{
+    category: 'function',
+    color: '#c7e9c0',
+    defaults: {
+      name:     {value: '%s'},
+      %s
+    },
+    inputs:1,
+    outputs: %d, // how many callbacks of cameraInit
+    icon: "function.png",
+    label: function() {
+      return this.name;
+    }
+  });
+</script>
+
+<script type="text/x-red" data-template-name="%s">
+  %s
+</script>
+
+<script type="text/x-red" data-help-name="%s">
+  <p> %s help </p>
+</script>
+''' %(node, node, node, 
+      AddIndent(configDefaultValueStr(node, configType, cppHeader), 6),
+      initFuncOutputNums(initFunc), node, 
+      configFieldStr(node, configType, cppHeader), 
+      node, node)
+
+  fp.write(s)
+  fp.close()
+
+  return
+
+def initFuncOutputNums(initFunc):
+  return len(initFunc["parameters"]) - 1
+
+def configDefaultValueStr(node, configType, cppHeader):
+  s = ""
+  configType = GetNoQualifierType(configType)
+
+  if (not IsStructArg(configType)):
+    return s
+
+  argStructName = re.sub(r'^struct ', '', configType)
+  cls = GetClass(argStructName)
+
+  props = cls["properties"]["public"]
+  for idxs, prop in enumerate(props):
+    fldName = prop["name"]
+    fldMacroName = argStructName + "_" + fldName
+    
+    for define in cppHeader.defines:
+      macros = IsValidMacro(define)
+      if len(macros) != 0 and fldMacroName == macros[0]:
+        fldMacroVal = macros[1]
+        break;
+    s += \
+'''
+%s : {value : %s}''' %(fldName, fldMacroVal)
+    if idxs != len(props) - 1:
+      s += ","
+
+  return s
+
+def configFieldStr(node, configType, cppHeader):
+  configType = GetNoQualifierType(configType)
+
+  if (not IsStructArg(configType)):
+    return s
+
+  argStructName = re.sub(r'^struct ', '', configType)
+  cls = GetClass(argStructName)
+
+  s = \
+'''<div class="form-row">
+<label for="node-input-name"><i class="icon-tag"></i> </label>
+<input type="text" id="node-input-name" placeholder="Name">
+</div>
+'''
+
+  props = cls["properties"]["public"]
+  for idxs, prop in enumerate(props):
+    fldName = prop["name"]
+    
+    s += \
+'''
+<div class="form-row">
+<label for="node-input-%s"><i class="icon-tag"></i> %s</label>
+<input type="text" id="node-input-%s">
+</div>
+''' %(fldName, fldName, fldName)
+
+  return s
+
+def GenGatheredNodeRedJsFile(NodeGroup):
+  init = NodeInitFuncSuffix()
+  onData = NodeOnDataFuncSuffix()
+  release = NodeReleaseFuncSuffix()
+  struct = NodeConfigStructSuffix()
+  for node in NodeGroup.keys():
+    funcs = NodeGroup[node]
+    initFunc = funcs[NodeInitFuncSuffix()]
+    onDataFunc = funcs[NodeOnDataFuncSuffix()]
+    releaseFunc = funcs[NodeReleaseFuncSuffix()]
+    
+    # Generate JS file
+    jsFile =  node + ".js"
+    printDbg("generate " + jsFile)
+    f = config.NODERED_PATH + "/" + jsFile
+    fp = open(f, "w")
+  
+    s = \
+'''var IOLIB = require('./%s');
+
+var %s = new IOLIB.IO({
+  log: true,
+  quickInit: false
+});
+
+module.exports = function(RED) {
+  /**************************************************
+                        %s
+   **************************************************/
+
+  function %s(config) {
+  
+    RED.nodes.createNode(this,config);
+    var node = this;
+
+    var %s = require('%s')
+    var %s = new %s(node, config);
+''' %(os.path.relpath(config.INSTALL_DIR, config.NODERED_PATH), \
+      GetIOInstanceName(), \
+      node, node, \
+      GetUtilModuleName(), GetUtilModuleFile(), \
+      GetUtilModuleVarName(), GetUtilModuleName())
+  
+  
+    s += AddIndent(GenInitFuncConv(node, initFunc), 4)
+    s += AddIndent(GenOnDataFuncConv(node, onDataFunc), 4)
+    s += AddIndent(GenReleaseFuncConv(node, releaseFunc), 4)
+    s += \
+'''
+  }
+  RED.nodes.registerType("%s", %s);
+}
+''' %(node, node)
+    fp.write(s)
+    fp.close()
+
+def GenCbFuncListBefore(idx):
+  s = ""
+  for index in range(1, idx):
+    s += "null, " 
+  return s
+
+def GenCbFuncListAfter(idx, num):
+  s = ""
+  for index in range(idx + 1, num):
+    s += ", null"
+  return s
+
+def GenerateConfigFunc(node, configType, configFuncName):
+  
+  configType = GetNoQualifierType(configType)
+
+  if (not IsStructArg(configType)):
+    return s
+
+  argStructName = re.sub(r'^struct ', '', configType)
+  cls = GetClass(argStructName)
+
+  s = \
+'''
+// configure function
+function %s(src) {
+  var dst = {};
+''' % (configFuncName)
+
+  props = cls["properties"]["public"]
+  for idxs, prop in enumerate(props):
+    fldName = prop["name"]
+    fldMacroName = argStructName + "_" + fldName
+    s += AddIndent(GenNodeRedArgTran(prop, idxs, "dst%d" %(idxs), "src['%s']" %(fldName), True), 2)
+    s += \
+'''dst["%s"] = dst%s || %s.%s;
+''' %(fldName, idxs, GetIOInstanceName(), fldMacroName)
+
+  s += \
+'''
+  return dst;
+}
+'''
+  return s
+
+# func(struct, cb, cb, cb)
+def GenOnDataFuncConv(node, func):
+  s = \
+'''
+// call onData function
+node.on('input', function(msg) {
+  // Validate the msg 
+  if(!%s.isValid(msg))
+    return;
+''' %(GetUtilModuleVarName())
+
+  s += AddIndent(GenNodeRedArgTrans(func), 2)
+  
+  # call JS-addon Code & send return value message 
+  s += AddIndent(GenNodeRedCall(func), 2)
+
+  s += \
+'''
+});
+'''
+  return s
+
+def GenReleaseFuncConv(node, func):
+  s = \
+'''
+// call release function
+node.on('close', function() {
+  %s.%s()
+})
+''' %(GetIOInstanceName(), func["name"])
+  return s
+
+def GenInitFuncConv(node, func):
+  configType = func["parameters"][0]["type"]
+  configFuncName = re.sub(r'^struct ', '', configType) + "New"
+  
+  s = GenerateConfigFunc(node, configType, configFuncName)
+
+  s += \
+'''
+// call initialize %sInit
+var arg0 = %s(config);
+console.log('init %s' + JSON.stringify(arg0));
+''' % (node, configFuncName, node)
+  
+  paraNum = len(func["parameters"])
+  for idx in range(paraNum):
+    if idx == 0: continue
+    s += \
+'''var arg%d = function() {
+  node.send([
+    %s{'payload' : arguments[0]}%s
+  ])
+}
+''' %(idx, \
+      GenCbFuncListBefore(idx), \
+      GenCbFuncListAfter(idx, paraNum))
+
+  argList = ""
+  for idx in range(paraNum):
+    argList += "arg%d" %idx
+    if idx != paraNum - 1:
+      argList += " ,"
+ 
+  s += \
+'''%s.%s(%s)
+''' % (GetIOInstanceName(), func["name"], argList)
+  return s

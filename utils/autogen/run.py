@@ -68,7 +68,8 @@ def HandleHeader(f):
   #GenJsApiMap(split[0], cppHeader)
   GenJsApi(split[0], globalVar.curCppHeader)
   GenC(split[0], globalVar.curCppHeader)
-  GenNodeRedNodes(split[0], globalVar.curCppHeader)
+  GenGatheredNodeRedNodes(split[0], globalVar.curCppHeader)
+#GenNodeRedNodes(split[0], globalVar.curCppHeader)
 
   UnsetPrintModule()
 
@@ -136,55 +137,55 @@ def SetConfigVar(configfileName):
   if IsSet("configfile.INPUT_DIR", configfile):
     config.INPUT_DIR = GetVarFromFile(configfile.INPUT_DIR, rPath, configfilePath)
   else:
-    print "set INPUT_DIR from %s error" %(configfileName)
+    printErr("set INPUT_DIR from %s error" %(configfileName))
   print "config.INPUT_DIR: ", config.INPUT_DIR
   
   if IsSet("configfile.INPUT_DECL_PATHS", configfile):
     config.INPUT_DECL_PATHS = GetVarFromFile(configfile.INPUT_DECL_PATHS, rPath, configfilePath)
   else:
-    print "set INPUT_DECL_PATHS from %s error" %(configfileName)
+    printErr("set INPUT_DECL_PATHS from %s error" %(configfileName))
   print "config.INPUT_DECL_PATHS: ", config.INPUT_DECL_PATHS
   
   if IsSet("configfile.INPUT_LIB_PATH", configfile):
     config.INPUT_LIB_PATH = GetVarFromFile(configfile.INPUT_LIB_PATH, rPath, configfilePath)
   else:
-    print "set INPUT_LIB_PATH from %s error" %(configfileName)
+    printErr("set INPUT_LIB_PATH from %s error" %(configfileName))
   print "config.INPUT_LIB_PATH: ", config.INPUT_LIB_PATH
   
   if IsSet("configfile.ATLAS_PATH", configfile):
     config.ATLAS_PATH = GetVarFromFile(configfile.ATLAS_PATH, rPath, configfilePath)
   else:
-    print "ATLAS_PATH from %s error" %(configfileName)
+    printErr("ATLAS_PATH from %s error" %(configfileName))
   print "config.ATLAS_PATH:", config.ATLAS_PATH
   
   if IsSet("configfile.NODERED_PATH", configfile):
     config.NODERED_PATH = GetVarFromFile(configfile.NODERED_PATH, rPath, configfilePath)
   else:
-    print "set NODERED_PATH from %s error" %(configfileName)
+    printErr("set NODERED_PATH from %s error" %(configfileName))
   print "config.NODERED_PATH: ", config.NODERED_PATH
   
   if IsSet("configfile.INSTALL_DIR", configfile):
     config.INSTALL_DIR = GetVarFromFile(configfile.INSTALL_DIR, rPath, configfilePath)
   else:
-    print "set INSTALL_DIR from %s error" %(configfileName)
+    printErr("set INSTALL_DIR from %s error" %(configfileName))
   print "config.INSTALL_DIR: ", config.INSTALL_DIR
   
   if IsSet("configfile.EXTRA_LIB", configfile):
     config.EXTRA_LIB = configfile.EXTRA_LIB
   else:
-    print "set EXTRA_LIB from %s error" %(configfileName)
+    printErr("set EXTRA_LIB from %s error" %(configfileName))
   print "config.EXTRA_LIB: ", config.EXTRA_LIB
   
   if IsSet("configfile.AUTOGEN_TEST",  configfile):
     config.AUTOGEN_TEST = configfile.AUTOGEN_TEST
   else:
-    print "set AUTOGEN_TEST from %s error" %(configfileName)
+    printErr("set AUTOGEN_TEST from %s error" %(configfileName))
   print "config.AUTOGEN_TEST:", config.AUTOGEN_TEST
   
   if IsSet("configfile.DEBUG", configfile):
     config.DEBUG = configfile.DEBUG
   else:
-    print "set DEBUG from %s error" %(configfileName)
+    printErr("set DEBUG from %s error" %(configfileName))
   print "config.DEBUG:", config.DEBUG
 
   print "==================================================================="
@@ -219,11 +220,10 @@ if __name__ == "__main__":
       configfile = arg
 #sys.exit(3)
     else:
-      print 'unhandled option'
+      printErr('unhandled option')
       sys.exit(3)
 
   SetConfigVar(configfile)
-  print config.AUTOGEN_TEST
 
   if autotest == 1:
     config.AUTOGEN_TEST = 1
