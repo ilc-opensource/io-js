@@ -69,7 +69,7 @@ def HandleHeader(f):
   GenJsApi(split[0], globalVar.curCppHeader)
   GenC(split[0], globalVar.curCppHeader)
   GenGatheredNodeRedNodes(split[0], globalVar.curCppHeader)
-#GenNodeRedNodes(split[0], globalVar.curCppHeader)
+  #GenNodeRedNodes(split[0], globalVar.curCppHeader)
 
   UnsetPrintModule()
 
@@ -118,9 +118,32 @@ def GetVarFromFile(var, rPath, configfilePath) :
   else:
     assert 0, "unexpected type for value from configfile"
 
+def printConfigPrefix(length, configStr, configChar):
+  s = ""
+  configLen = len(configStr)
+  preStrLen = (length - configLen) / 2
+  sufStrLen = length - preStrLen - configLen
+
+  for i in range(1, preStrLen):
+    s += configChar
+  s += configStr
+  for i in range(1, sufStrLen):
+    s += configChar
+  
+  print s
+
+def printConfigSuffix(length, configChar):
+  s = ""
+  for i in range(1, length):
+    s += configChar
+  print s
 
 def SetConfigVar(configfileName):
-  print "==================configure file: %s ========================="  %configfileName
+  configStrLen = 80
+  configChar = "="
+  configStr = "configure file: %s" %configfileName
+  printConfigPrefix(configStrLen, configStr, configChar)
+  
   runScriptPath = os.path.abspath(os.getcwd())
   configfilePath = os.path.split(os.path.abspath(configfileName))[0]
   printDbg("runScriptPath: " + runScriptPath)
@@ -188,7 +211,8 @@ def SetConfigVar(configfileName):
     printErr("set DEBUG from %s error" %(configfileName))
   print "config.DEBUG:", config.DEBUG
 
-  print "==================================================================="
+  printConfigSuffix(configStrLen, configChar)
+
 
 def Version():
   print "run.py version: ", configSys.VERSION

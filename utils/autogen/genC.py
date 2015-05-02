@@ -268,7 +268,7 @@ def GenStructArgReturn(argType, idx, argCName, argV8Name):
     fldType = prop["type"]
     fldBasicType = GetBasicType(prop)
     fldCName = "(%s.%s)" %(argCName, fldName)
-    fldV8Name = TranArgV8Name(argV8Name) + "_%s" %(fldName)
+    fldV8Name = TranArgV8Name(argV8Name) + "_%s_r" %(fldName)
 
     if (prop["pointer"] == 1 or prop["array"] == 1):
       s += \
@@ -299,8 +299,14 @@ Local<Value> %s = %s->ToObject()->Get(String::New("%s"));'''\
 '''% (argV8Name, fldName, fldV8Name)
   return s
 
+def GenEnumArgReturn(argCName, argV8Name):
+  assert 0, "enum reference is not supported"
+
+def GenCommonArgReturn(argType, argCName, argV8Name):
+  assert 0, "basic type reference is not supported"
+
 def GenArgReturn(idx, arg):
-  if arg["pointer"] != 1 and arg["array"] != 1:
+  if arg["pointer"] != 1 and arg["array"] != 1 and arg["reference"] != 1:
     return
 
   argBasicType = GetBasicType(arg)
@@ -309,10 +315,16 @@ def GenArgReturn(idx, arg):
 
   if (IsClassArg(argBasicType)):
     s = ""
-  elif (GetIdenticalType(argBasicType) == "char"):
-    s = GenStringArgReturn(arg, idx, argCName, argV8Name)
+  elif (arg["pointer"] == 1 or arg["array"] == 1):
+    if (GetIdenticalType(argBasicType) == "char"):
+      s = GenStringArgReturn(arg, idx, argCName, argV8Name)
+    else:
+      s = GenArrayArgReturn(arg, idx, argCName, argV8Name)
+  elif arg["reference"] == 1 and IsStructArg(arg["type"]):
+    s = GenStructArgReturn(arg["type"], idx, argCName, argV8Name)
   else:
-    s = GenArrayArgReturn(arg, idx, argCName, argV8Name)
+    assert 0, "common arg reference is not supported"
+    s = GenCommonArgReturn(arg, idx, argCName, argV8Name)
   return s
 
 def GenArrayReturn(rtn, idx, rtnCName, rtnV8Name, needNewTargName):
@@ -446,13 +458,12 @@ def GenArgsReturn(func):
   s = ""
 
   for idx, arg in enumerate(args):
-    if arg["pointer"] != 1 and arg["array"] != 1:
+    if arg["pointer"] != 1 and arg["array"] != 1 and arg["reference"] != 1:
       continue
 
     if (arg["function_pointer"] != {} and \
         arg["function_pointer"] != 0) :
       continue
-
     s += GenArgReturn(idx, arg)
   return s
 

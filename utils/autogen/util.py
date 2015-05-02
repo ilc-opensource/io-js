@@ -282,7 +282,6 @@ def CheckArgSanity(arg, convertFP, convertClass):
   elif IsClassArg(argBasicType):
     return convertClass
   elif (IsStructArg(argBasicType)):
-    printDbg("Is struct Arg")
     return CheckStructArgSanity(arg)
   elif (IsEnumArg(argBasicType)):
     return CheckEnumArgSanity(arg)
@@ -377,6 +376,7 @@ def ParseFuncPointTypedef(type_t):
         argTypes[i] = {
           "type": argType,
           "pointer" : argType.count("*"),
+          "reference" : argType.count("&"),
           "array": argType.count("["),
 #TODO: parse function pointer
           "function_pointer": {}
@@ -385,6 +385,7 @@ def ParseFuncPointTypedef(type_t):
         "rtnType" : {
            "type" : retType, \
            "pointer": retType.count("*"), \
+           "reference" : argType.count("&"),
            "array" : retType.count("["), \
 #TODO: parse function pointer
            "function_pointer": {}
@@ -480,19 +481,28 @@ def ParseFuncRtnType(func):
   func["rtnType"] = {
     "type" : rtnType, \
     "pointer": rtnType.count("*"), \
+    "reference": rtnType.count("&"), \
     "array": 0, \
 #TODO: parse function pointer
     "function_pointer": {} \
   }
 
+def FixReferenceType(params):
+  for idx, arg in enumerate(params):
+    if arg["reference"] == 1:
+      starIndex = arg["type"].index("&")
+      params[idx]["type"] = arg["type"][:starIndex].strip()
+
 def ParseFuncPoint(cppHeader):
   for c in cppHeader.classes:
     for func in cppHeader.classes[c]["methods"]["public"]:
       ParseFuncPointerParams(func["parameters"])
+      FixReferenceType(func["parameters"])
       ParseFuncRtnType(func)
 
   for func in cppHeader.functions:
     ParseFuncPointerParams(func["parameters"])
+    FixReferenceType(func["parameters"])
     ParseFuncRtnType(func)
 
 def FixEnumPropType(cppHeader):
