@@ -657,8 +657,8 @@ def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
       configFieldStr(node, configType, cppHeader), 
       node, node)
 
-  fp.write(s)
-  fp.close()
+    fp.write(s)
+    fp.close()
 
   return
 
