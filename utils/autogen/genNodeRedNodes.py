@@ -16,8 +16,9 @@ def GetNodeRedFileName(funcName):
   return GetNodeRedNodeName(funcName)
 
 def GetUtilModuleFile():
-  return os.path.relpath(config.ATLAS_PATH + '/iot/lib/red-util.js', config.NODERED_PATH);
-
+  #return os.path.relpath(config.ATLAS_PATH + '/iot/lib/red-util.js', config.NODERED_PATH);
+  return 'red-util'
+  
 def GetUtilModuleName():
   return "RedUtil"
 
@@ -196,7 +197,7 @@ def GenNodeRedArgTrans(func):
   s = \
 '''
 // extract arguments from msg
-var args = msg.payload;
+var args = redUtil.msgToArgs(msg);
 '''
   
   for idx, param in enumerate(params):
@@ -314,7 +315,7 @@ def GenNodeRedFuncHtmlFile(className, func, funcRename):
 <!-- %s -->
 <script type="text/javascript">
   RED.nodes.registerType('%s',{
-    category: 'function',
+    category: 'atlas',
     color: '#c7e9c0',
     defaults: {
       name: {value:"%s"}
@@ -629,7 +630,7 @@ def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
 <!-- %s -->
 <script type="text/javascript">
   RED.nodes.registerType('%s',{
-    category: 'function',
+    category: 'atlas',
     color: '#c7e9c0',
     defaults: {
       name:     {value: '%s'},
@@ -889,6 +890,7 @@ console.log('init %s' + JSON.stringify(arg0));
       argList += " ,"
  
   s += \
-'''%s.%s(%s)
+'''
+redUtil.checkInit(%s.%s(%s));
 ''' % (GetIOInstanceName(), func["name"], argList)
   return s
