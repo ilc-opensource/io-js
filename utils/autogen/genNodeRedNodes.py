@@ -825,15 +825,19 @@ function %s(src) {
   var dst = {};
 ''' % (configFuncName)
 
+  argTranStr = ""
   props = cls["properties"]["public"]
   for idxs, prop in enumerate(props):
     fldName = prop["name"]
     fldMacroName = argStructName + "_" + fldName
-    s += AddIndent(GenNodeRedArgTran(prop, idxs, "dst%d" %(idxs), "src['%s']" %(fldName), True), 2)
-    s += \
-'''dst["%s"] = dst%s || %s.%s;
-''' %(fldName, idxs, GetIOInstanceName(), fldMacroName)
-
+    argTranStr += GenNodeRedArgTran(prop, idxs, "dst%d" %(idxs), "src['%s']" %(fldName), True)
+    argTranStr += GenNodeRedArgTran(prop, idxs, "dst%d_m" %(idxs), "%s.%s" %(GetIOInstanceName(), fldMacroName), True)
+    argTranStr += \
+'''
+dst["%s"] = dst%s || dst%s_m;
+''' %(fldName, idxs, idxs)
+  
+  s += AddIndent(argTranStr, 2)
   s += \
 '''
   return dst;
