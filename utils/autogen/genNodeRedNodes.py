@@ -485,6 +485,8 @@ def NodeReleaseFuncSuffix():
   return "Release"
 def NodeConfigStructSuffix():
   return "Config"
+def NodeHelpMacroSuffix():
+  return "Help"
 
 def SplitNodeComponentName(ComName):
   if ComName.endswith(NodeInitFuncSuffix()):
@@ -561,6 +563,7 @@ def GatherNodeInfo(module, cppHeader):
   onData = NodeOnDataFuncSuffix()
   release = NodeReleaseFuncSuffix()
   struct = NodeConfigStructSuffix()
+  help = NodeHelpMacroSuffix()
 
   for func in cppHeader.functions:
     funcName = func["name"]
@@ -577,8 +580,22 @@ def GatherNodeInfo(module, cppHeader):
       else:
         assert 0, "dumplicate definition of %s" %funcName
     else:
-      NodeGroup[nodeName] = {init:0, onData:0, release:0, struct:0}
+      NodeGroup[nodeName] = {init:0, onData:0, release:0, struct:0, help:0}
       NodeGroup[nodeName][funcNameSuffix] = func
+
+  for define in cppHeader.defines:
+    macros = IsValidMacro(define)
+    if len(macros) == 0:
+        continue
+    if not macros[0].endswith(help):
+        continue
+    
+    macroNameSplit = macros[0].partition(help)
+    nodeName = macroNameSplit[0]
+
+    if not NodeGroup.has_key(nodeName):
+      NodeGroup[nodeName] = {init:0, onData:0, release:0, struct:0, help:0}
+    NodeGroup[nodeName][help] = macros[1]
 
   for node in NodeGroup.keys():
     funcs = NodeGroup[node]
@@ -597,7 +614,6 @@ def GatherNodeInfo(module, cppHeader):
       printErr("Function 'release' is not defined for node %s" %node) 
       del NodeGroup[node]
       continue
-
   return NodeGroup
 
 def GenGatheredNodeRedNodes(module, cppHeader):
@@ -650,13 +666,13 @@ def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
 </script>
 
 <script type="text/x-red" data-help-name="%s">
-  <p> %s help </p>
+  <p> %s help: %s </p>
 </script>
 ''' %(node, node, node, 
       AddIndent(configDefaultValueStr(node, configType, cppHeader), 6),
       initFuncOutputNums(initFunc), node, 
       configFieldStr(node, configType, cppHeader), 
-      node, node)
+      node, node, funcs[NodeHelpMacroSuffix()])
 
     fp.write(s)
     fp.close()
