@@ -652,7 +652,7 @@ def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
       name:     {value: '%s'},
       %s
     },
-    inputs:1,
+    inputs: %d,
     outputs: %d, // how many callbacks of cameraInit
     icon: "function.png",
     label: function() {
@@ -670,6 +670,7 @@ def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
 </script>
 ''' %(node, node, node, 
       AddIndent(configDefaultValueStr(node, configType, cppHeader), 6),
+      onDataFuncInputNums(onDataFunc),
       initFuncOutputNums(initFunc), node, 
       configFieldStr(node, configType, cppHeader), 
       node, node, funcs[NodeHelpMacroSuffix()])
@@ -681,6 +682,15 @@ def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
 
 def initFuncOutputNums(initFunc):
   return len(initFunc["parameters"]) - 1
+
+def onDataFuncInputNums(onDataFunc):
+  params = onDataFunc["parameters"]
+  
+  if len(params) == 0:
+    return 0
+  if len(params) == 1 and params[0]["type"] == "void":
+    return 0
+  return 1
 
 def configDefaultValueStr(node, configType, cppHeader):
   s = ""
