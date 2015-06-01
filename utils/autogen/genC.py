@@ -880,7 +880,10 @@ static void SetConst(Handle<Object> obj) {
     if IsInt(macros[1]):
       s += "             Int32::New(%s));\n"% macros[1]
     elif (IsString(macros[1])):
-      s += "             v8::String::New(%s));\n"% macros[1]
+      if (len(macros[1]) == 3) and macros[1].startswith("\'") and macros[1].endswith("\'"):
+        s += "             v8::Integer::New(%s));\n"% macros[1]
+      else:
+        s += "             v8::String::New(%s));\n"% macros[1]
     else:
       s += "             Number::New(%s));\n"% macros[1]
 

@@ -595,6 +595,11 @@ def GatherNodeInfo(module, cppHeader):
 
     if not NodeGroup.has_key(nodeName):
       NodeGroup[nodeName] = {init:0, onData:0, release:0, struct:0, help:0}
+    
+    if macros[1].startswith("\""):
+      macros[1] = macros[1][1:]
+    if macros[1].endswith("\""):
+      macros[1] = macros[1][:len(macros[1]) - 1]
     NodeGroup[nodeName][help] = macros[1]
 
   for node in NodeGroup.keys():
@@ -666,14 +671,14 @@ def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
 </script>
 
 <script type="text/x-red" data-help-name="%s">
-  <p> %s help: %s </p>
+  <p> %s </p>
 </script>
 ''' %(node, node, node, 
       AddIndent(configDefaultValueStr(node, configType, cppHeader), 6),
       onDataFuncInputNums(onDataFunc),
       initFuncOutputNums(initFunc), node, 
       configFieldStr(node, configType, cppHeader), 
-      node, node, funcs[NodeHelpMacroSuffix()])
+      node, funcs[NodeHelpMacroSuffix()])
 
     fp.write(s)
     fp.close()
