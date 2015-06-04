@@ -691,7 +691,7 @@ def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
 </script>
 
 <script type="text/x-red" data-help-name="%s">
-  <p> %s </p>
+  %s
 </script>
 ''' %(node, node, GetNodeClass(NodeGroup, node), node, 
       AddIndent(configDefaultValueStr(node, configType, cppHeader), 6),
