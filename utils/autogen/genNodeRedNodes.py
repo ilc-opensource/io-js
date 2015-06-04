@@ -487,6 +487,8 @@ def NodeConfigStructSuffix():
   return "Config"
 def NodeHelpMacroSuffix():
   return "Help"
+def NodeClassMacroSuffix():
+  return "Class"
 
 def SplitNodeComponentName(ComName):
   if ComName.endswith(NodeInitFuncSuffix()):
@@ -564,6 +566,7 @@ def GatherNodeInfo(module, cppHeader):
   release = NodeReleaseFuncSuffix()
   struct = NodeConfigStructSuffix()
   help = NodeHelpMacroSuffix()
+  nclass = NodeClassMacroSuffix()
 
   for func in cppHeader.functions:
     funcName = func["name"]
@@ -580,27 +583,34 @@ def GatherNodeInfo(module, cppHeader):
       else:
         assert 0, "dumplicate definition of %s" %funcName
     else:
-      NodeGroup[nodeName] = {init:0, onData:0, release:0, struct:0, help:0}
+      NodeGroup[nodeName] = {init:0, onData:0, release:0, struct:0, help:0, nclass:0}
       NodeGroup[nodeName][funcNameSuffix] = func
 
   for define in cppHeader.defines:
     macros = IsValidMacro(define)
     if len(macros) == 0:
         continue
-    if not macros[0].endswith(help):
-        continue
-    
-    macroNameSplit = macros[0].partition(help)
-    nodeName = macroNameSplit[0]
+    if macros[0].endswith(nclass):
+      macroNameSplit = macros[0].partition(nclass)
+      nodeName = macroNameSplit[0]
 
-    if not NodeGroup.has_key(nodeName):
-      NodeGroup[nodeName] = {init:0, onData:0, release:0, struct:0, help:0}
+      if not NodeGroup.has_key(nodeName):
+        NodeGroup[nodeName] = {init:0, onData:0, release:0, struct:0, help:0, nclass:0}
     
-    if macros[1].startswith("\""):
-      macros[1] = macros[1][1:]
-    if macros[1].endswith("\""):
-      macros[1] = macros[1][:len(macros[1]) - 1]
-    NodeGroup[nodeName][help] = macros[1]
+      NodeGroup[nodeName][nclass] = macros[1]
+    
+    if macros[0].endswith(help):
+      macroNameSplit = macros[0].partition(help)
+      nodeName = macroNameSplit[0]
+
+      if not NodeGroup.has_key(nodeName):
+        NodeGroup[nodeName] = {init:0, onData:0, release:0, struct:0, help:0, nclass:0}
+    
+      if macros[1].startswith("\""):
+        macros[1] = macros[1][1:]
+      if macros[1].endswith("\""):
+        macros[1] = macros[1][:len(macros[1]) - 1]
+      NodeGroup[nodeName][help] = macros[1]
 
   for node in NodeGroup.keys():
     funcs = NodeGroup[node]
@@ -632,6 +642,16 @@ def GenGatheredNodeRedNodes(module, cppHeader):
   GenGatheredNodeRedJsFile(NodeGroup)
   GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader)
   
+def GetNodeDefaultClass():
+  return "\"Atlas\""
+
+def GetNodeClass(NodeGroup, node):
+  funcs = NodeGroup[node]
+  if funcs[NodeClassMacroSuffix()] != 0:
+    return funcs[NodeClassMacroSuffix()]
+  else:
+    return GetNodeDefaultClass()
+
 def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
   for node in NodeGroup.keys():
     funcs = NodeGroup[node]
@@ -651,7 +671,7 @@ def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
 <!-- %s -->
 <script type="text/javascript">
   RED.nodes.registerType('%s',{
-    category: 'atlas',
+    category: %s,
     color: '#c7e9c0',
     defaults: {
       name:     {value: '%s'},
@@ -673,7 +693,7 @@ def GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader):
 <script type="text/x-red" data-help-name="%s">
   <p> %s </p>
 </script>
-''' %(node, node, node, 
+''' %(node, node, GetNodeClass(NodeGroup, node), node, 
       AddIndent(configDefaultValueStr(node, configType, cppHeader), 6),
       onDataFuncInputNums(onDataFunc),
       initFuncOutputNums(initFunc), node, 
