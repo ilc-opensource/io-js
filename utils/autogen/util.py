@@ -558,3 +558,6 @@ def GenCallArgList(func):
 
 def GenCall(func):
   return "%s(%s)" % (func["name"], GenCallArgList(func))
+
+def GetStructName(t):
+  return re.sub(r'^struct ', '', t)

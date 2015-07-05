@@ -187,10 +187,11 @@ def GenNodeRedArgTran(arg, idx, argJSName, argJSONName, needNewVar):
 
   return s
 
-def GenNodeRedArgTrans(func):
+def GenNodeRedArgTrans(func, node):
   funcName = func["name"]
   params = func["parameters"] 
-  
+ 
+  print "node: %s, funcName%s " %(node, funcName) 
   if len(params) == 0:
     return ""
   
@@ -200,13 +201,22 @@ def GenNodeRedArgTrans(func):
 var args = redUtil.msgToArgs(msg);
 '''
   
+  skip = 0
   for idx, param in enumerate(params):
     if param["type"] == "void":
       return ""
-
+    
     argJSType = GetJSType(param["type"])
     argJSName = GenArgName(idx, "arg")
-    argJSONName = GenArgArrayName(idx)
+    argJSONName = GenArgArrayName(idx + skip)
+
+    nodeConfigType = node + NodeConfigStructSuffix()
+    
+    if param["type"] == nodeConfigType:
+      s += "var %s = config;\n" % argJSName
+      skip -= 1
+      continue
+    
     if (idx < len(numString)):
       idxStr = numString[idx]
     else:
@@ -347,7 +357,8 @@ def GenNodeRedFuncJSFile(className, func, funcRename):
   s = \
 '''
 // C-Function: %s
-function %s(config) {
+function %s(param) {
+  var config = param;
   RED.nodes.createNode(this,config);
   var node = this;
   var %s = new %s(node, config);
@@ -362,7 +373,7 @@ function %s(config) {
       GetUtilModuleVarName(), GetUtilModuleName(), \
       GetUtilModuleVarName())
 
-  s += AddIndent(GenNodeRedArgTrans(func), 4)
+  s += AddIndent(GenNodeRedArgTrans(func, None), 4)
   
   # call JS-addon Code & send return value message 
   s += AddIndent(GenNodeRedCallAndSendMsg(func), 4)
@@ -638,7 +649,7 @@ def GenGatheredNodeRedNodes(module, cppHeader):
   mkdir(config.NODERED_PATH)
 
   NodeGroup = GatherNodeInfo(module, cppHeader)
-  
+ 
   GenGatheredNodeRedJsFile(NodeGroup)
   GenGatheredNodeRedHtmlFile(NodeGroup, cppHeader)
   
@@ -800,22 +811,22 @@ var %s = new IOLIB.IO({
   quickInit: false
 });
 
+var RedUtil = require('red-util');
+
 module.exports = function(RED) {
   /**************************************************
                         %s
    **************************************************/
 
-  function %s(config) {
-  
+  function %s(param) {
+    var config = param; 
     RED.nodes.createNode(this,config);
     var node = this;
 
-    var %s = require('%s')
     var %s = new %s(node, config);
 ''' %(os.path.relpath(config.INSTALL_DIR, config.NODERED_PATH), \
       GetIOInstanceName(), \
       node, node, \
-      GetUtilModuleName(), GetUtilModuleFile(), \
       GetUtilModuleVarName(), GetUtilModuleName())
   
   
@@ -884,14 +895,14 @@ dst["%s"] = dst%s || dst%s_m;
 def GenOnDataFuncConv(node, func):
   s = \
 '''
-// call onData function
+// call %s onData function
 node.on('input', function(msg) {
   // Validate the msg 
   if(!%s.isValid(msg))
     return;
-''' %(GetUtilModuleVarName())
+''' %(node, GetUtilModuleVarName())
 
-  s += AddIndent(GenNodeRedArgTrans(func), 2)
+  s += AddIndent(GenNodeRedArgTrans(func, node), 2)
   
   # call JS-addon Code & send return value message 
   s += AddIndent(GenNodeRedCall(func), 2)
@@ -907,14 +918,14 @@ def GenReleaseFuncConv(node, func):
 '''
 // call release function
 node.on('close', function() {
-  %s.%s()
+  %s.%s(config);
 })
 ''' %(GetIOInstanceName(), func["name"])
   return s
 
 def GenInitFuncConv(node, func):
   configType = func["parameters"][0]["type"]
-  configFuncName = re.sub(r'^struct ', '', configType) + "New"
+  configFuncName = GetStructName(configType)+ "New"
   
   s = GenerateConfigFunc(node, configType, configFuncName)
 
