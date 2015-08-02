@@ -511,8 +511,9 @@ def SplitNodeComponentName(ComName):
   if ComName.endswith(NodeConfigStructSuffix()):
     return ComName.partition(NodeConfigStructSuffix())
   
-  assert 0, "Unexpected Component name %s" %(ComName)
-  return ComName
+  return None
+  #assert 0, "Unexpected Component name %s" %(ComName)
+  #return ComName
 
 def IsMacroDefined(macroName, cppHeader):
   for define in cppHeader.defines:
@@ -582,6 +583,9 @@ def GatherNodeInfo(module, cppHeader):
   for func in cppHeader.functions:
     funcName = func["name"]
     funcNameSplits = SplitNodeComponentName(funcName)
+    if(funcNameSplits == None):
+      continue
+
     nodeName = funcNameSplits[0]
     funcNameSuffix = funcNameSplits[1]
     if (funcNameSuffix == init) and not IsValidInitFunc(func, cppHeader):
